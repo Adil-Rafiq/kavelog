@@ -1,0 +1,199 @@
+"use client";
+
+import * as React from "react";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/toaster";
+
+type Status = "present" | "absent" | "paid_leave";
+
+interface RecordInput {
+  status: Status;
+  clockIn: string | null;
+  clockOut: string | null;
+  notes: string | null;
+}
+
+export function DayEditor({
+  dateKey,
+  record,
+  holiday,
+  onClose,
+  onSaved,
+  isAdmin,
+  targetUserId,
+}: {
+  dateKey: string;
+  record: RecordInput | null;
+  holiday: string | null;
+  onClose: () => void;
+  onSaved: () => void;
+  isAdmin: boolean;
+  targetUserId: string;
+}) {
+  const [status, setStatus] = React.useState<Status>(record?.status ?? "present");
+  const [clockIn, setClockIn] = React.useState(toLocalTime(record?.clockIn ?? null));
+  const [clockOut, setClockOut] = React.useState(toLocalTime(record?.clockOut ?? null));
+  const [notes, setNotes] = React.useState(record?.notes ?? "");
+  const [pending, setPending] = React.useState(false);
+
+  const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  async function save() {
+    setPending(true);
+    const payload: Record<string, unknown> = {
+      userId: targetUserId,
+      date: dateKey,
+      status,
+      notes: notes || null,
+    };
+    if (status === "present") {
+      payload.clockIn = clockIn ? localToISO(dateKey, clockIn) : null;
+      payload.clockOut = clockOut ? localToISO(dateKey, clockOut, clockIn) : null;
+    } else {
+      payload.clockIn = null;
+      payload.clockOut = null;
+    }
+    const res = await fetch("/api/attendance/record", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    setPending(false);
+    if (!res.ok) {
+      toast({
+        kind: "error",
+        title: "Could not save",
+        description: data?.error ?? "Please try again.",
+      });
+      return;
+    }
+    toast({ kind: "success", title: "Saved" });
+    onSaved();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 p-0 backdrop-blur-sm md:items-center md:p-6"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-t-[16px] border border-border bg-card text-card-foreground md:rounded-[16px] animate-reveal grain"
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              Edit day
+            </div>
+            <div className="text-base text-foreground">{dateLabel}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex flex-col gap-5 p-5">
+          {holiday && (
+            <Badge variant="holiday">Holiday — {holiday}</Badge>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              id="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as Status)}
+            >
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+              <option value="paid_leave">Paid leave</option>
+            </Select>
+          </div>
+
+          {status === "present" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="in">Clock in</Label>
+                <Input
+                  id="in"
+                  type="time"
+                  value={clockIn}
+                  onChange={(e) => setClockIn(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="out">Clock out</Label>
+                <Input
+                  id="out"
+                  type="time"
+                  value={clockOut}
+                  onChange={(e) => setClockOut(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="notes">Notes (optional)</Label>
+            <Input
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. half day, WFH, client visit"
+            />
+          </div>
+
+          {isAdmin && (
+            <div className="text-[11px] text-warning">
+              Editing as admin — the user will be notified.
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={pending}>
+            {pending ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function toLocalTime(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function localToISO(dateKey: string, time: string, clockInTime?: string) {
+  const [y, mo, da] = dateKey.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const d = new Date(y, mo - 1, da, h, mi, 0, 0);
+  // If this is a clock-out for a second-shift day where in > out, push to next day.
+  if (clockInTime) {
+    const [ih, im] = clockInTime.split(":").map(Number);
+    if (ih * 60 + im > h * 60 + mi) {
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  return d.toISOString();
+}

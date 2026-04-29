@@ -1,0 +1,5 @@
+- An employee is allowed maximum of 14 paid leaves per year.
+- In a month, an employee can utilize at max 1 paid leave out of 14. 2 in case of emergency.
+- The office timings for Development, Design and HR team are 10 AM to 7 PM. While for BD team, the office timings are from 6 PM to 3 AM
+- There are 8 working hours plus one break hour. For first timers the break is from 1 PM to 2 PM. For second timers the break is from 10 PM to 11 PM
+- Overtime will be considered in chunks of 30 mins AFTER a 30 min window has passed past checkout time. So if the checkout if 7 PM, the 7 to 7:30 PM is the checkout window. After that employee will be considered for overtime payment if he delivers 30 min of work. so 7:30 to 8 PM will be considered the first overtime chunk.
