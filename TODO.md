@@ -1,0 +1,5 @@
+[ ] Are we taking care of minutes as well? I can see total hours as whole number even one I add some odd minutes as well
+[ ]  The time selection drop down button does not appear. The either move it to the left and more visible or the entire input should be dropdown.
+[ ] When the user is done for the day, the Clock in button on the dashboard(Today) still appears to be clickable.
+[ ] The OT chunks are not calculated correctly. Overtime is calculated as such: once an employee hits their daily required hours point (i.e 8 working hours) the first overtime chunk will be considered from the nearest half or full hour mark. So let's suppose an employee clocked in at 10:15 AM, then their 8 working hours will be completed at 7:15 PM (removed the 1 break hour). Now after that the OT chunk time will start from 7:30 PM - 8:00 PM.
+[ ] Forget password mechanism
