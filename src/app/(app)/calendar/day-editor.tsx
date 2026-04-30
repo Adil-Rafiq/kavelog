@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "@/components/ui/toaster";
 
 type Status = "present" | "absent" | "paid_leave";
@@ -128,21 +129,11 @@ export function DayEditor({
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="in">Clock in</Label>
-                <Input
-                  id="in"
-                  type="time"
-                  value={clockIn}
-                  onChange={(e) => setClockIn(e.target.value)}
-                />
+                <TimePicker id="in" value={clockIn} onChange={setClockIn} />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="out">Clock out</Label>
-                <Input
-                  id="out"
-                  type="time"
-                  value={clockOut}
-                  onChange={(e) => setClockOut(e.target.value)}
-                />
+                <TimePicker id="out" value={clockOut} onChange={setClockOut} />
               </div>
             </div>
           )}
