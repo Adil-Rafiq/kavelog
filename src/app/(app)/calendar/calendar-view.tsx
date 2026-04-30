@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { Badge, StatusDot } from "@/components/ui/badge";
+import { StatusDot } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Stat } from "@/components/ui/stat";
 import { DayEditor } from "./day-editor";
@@ -49,6 +48,39 @@ export function CalendarView({
   const router = useRouter();
   const [selected, setSelected] = React.useState<string | null>(null);
 
+  // Track the month the UI is *displaying*, separate from the month whose data
+  // has actually loaded from the server. When the user clicks prev/next we
+  // bump the displayed month immediately, then kick off the server fetch in
+  // a transition. Until props catch up we render skeletons in the data slots.
+  const [displayedYear, setDisplayedYear] = React.useState(year);
+  const [displayedMonth0, setDisplayedMonth0] = React.useState(month0);
+  const [isPending, startTransition] = React.useTransition();
+
+  React.useEffect(() => {
+    setDisplayedYear(year);
+    setDisplayedMonth0(month0);
+  }, [year, month0]);
+
+  const isLoading =
+    isPending || displayedYear !== year || displayedMonth0 !== month0;
+
+  function navigate(targetYear: number, targetMonth0: number) {
+    setDisplayedYear(targetYear);
+    setDisplayedMonth0(targetMonth0);
+    startTransition(() => {
+      router.push(`/calendar?y=${targetYear}&m=${targetMonth0 + 1}`);
+    });
+  }
+
+  function navigateToday() {
+    const t = new Date();
+    setDisplayedYear(t.getFullYear());
+    setDisplayedMonth0(t.getMonth());
+    startTransition(() => {
+      router.push("/calendar");
+    });
+  }
+
   const recordMap = React.useMemo(() => {
     const m = new Map<string, RecordView>();
     for (const r of records) m.set(r.date, r);
@@ -61,21 +93,22 @@ export function CalendarView({
     return m;
   }, [holidays]);
 
-  const monthName = new Date(year, month0).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthName = new Date(displayedYear, displayedMonth0).toLocaleDateString(
+    "en-US",
+    { month: "long", year: "numeric" }
+  );
 
-  const prevMonth = new Date(year, month0 - 1);
-  const nextMonth = new Date(year, month0 + 1);
+  const prevMonth = new Date(displayedYear, displayedMonth0 - 1);
+  const nextMonth = new Date(displayedYear, displayedMonth0 + 1);
 
-  // Build calendar grid
-  const first = new Date(year, month0, 1);
-  const startWeekday = first.getDay(); // 0=Sun
-  const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+  // Build calendar grid for the displayed (optimistic) month
+  const first = new Date(displayedYear, displayedMonth0, 1);
+  const startWeekday = first.getDay();
+  const daysInMonth = new Date(displayedYear, displayedMonth0 + 1, 0).getDate();
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startWeekday; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month0, d));
+  for (let d = 1; d <= daysInMonth; d++)
+    cells.push(new Date(displayedYear, displayedMonth0, d));
   while (cells.length % 7 !== 0) cells.push(null);
 
   const todayKey = toDateKey(new Date());
@@ -95,28 +128,20 @@ export function CalendarView({
             variant="outline"
             size="icon"
             onClick={() =>
-              router.push(
-                `/calendar?y=${prevMonth.getFullYear()}&m=${prevMonth.getMonth() + 1}`
-              )
+              navigate(prevMonth.getFullYear(), prevMonth.getMonth())
             }
             aria-label="Previous month"
           >
             <ChevronLeft size={16} />
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/calendar")}
-          >
+          <Button variant="outline" size="sm" onClick={navigateToday}>
             Today
           </Button>
           <Button
             variant="outline"
             size="icon"
             onClick={() =>
-              router.push(
-                `/calendar?y=${nextMonth.getFullYear()}&m=${nextMonth.getMonth() + 1}`
-              )
+              navigate(nextMonth.getFullYear(), nextMonth.getMonth())
             }
             aria-label="Next month"
           >
@@ -128,24 +153,40 @@ export function CalendarView({
       {/* Stats strip */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card className="p-4">
-          <Stat
-            label="Hours worked"
-            value={formatHours(summary.totalHours)}
-            unit={`/ ${summary.expectedHours.toFixed(0)} h`}
-          />
+          {isLoading ? (
+            <StatSkeleton label="Hours worked" />
+          ) : (
+            <Stat
+              label="Hours worked"
+              value={formatHours(summary.totalHours)}
+              unit={`/ ${summary.expectedHours.toFixed(0)} h`}
+            />
+          )}
         </Card>
         <Card className="p-4">
-          <Stat label="Present" value={summary.daysPresent} unit="days" />
+          {isLoading ? (
+            <StatSkeleton label="Present" />
+          ) : (
+            <Stat label="Present" value={summary.daysPresent} unit="days" />
+          )}
         </Card>
         <Card className="p-4">
-          <Stat label="Absent" value={summary.daysAbsent} unit="days" />
+          {isLoading ? (
+            <StatSkeleton label="Absent" />
+          ) : (
+            <Stat label="Absent" value={summary.daysAbsent} unit="days" />
+          )}
         </Card>
         <Card className="p-4">
-          <Stat
-            label="Paid leave"
-            value={summary.daysPaidLeave}
-            unit="days"
-          />
+          {isLoading ? (
+            <StatSkeleton label="Paid leave" />
+          ) : (
+            <Stat
+              label="Paid leave"
+              value={summary.daysPaidLeave}
+              unit="days"
+            />
+          )}
         </Card>
       </div>
 
@@ -174,27 +215,33 @@ export function CalendarView({
           {cells.map((d, idx) => {
             if (!d) return <div key={idx} className="h-20 md:h-24" />;
             const key = toDateKey(d);
-            const rec = recordMap.get(key);
+            const rec = isLoading ? undefined : recordMap.get(key);
+            const holiday = isLoading ? undefined : holidayMap.get(key);
             const isToday = key === todayKey;
             const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-            const holiday = holidayMap.get(key);
-            const status: "present" | "absent" | "leave" | "weekend" | "holiday" | null =
-              rec?.status === "present"
-                ? "present"
-                : rec?.status === "absent"
-                  ? "absent"
-                  : rec?.status === "paid_leave"
-                    ? "leave"
-                    : holiday
-                      ? "holiday"
-                      : isWeekend
-                        ? "weekend"
-                        : null;
+            const status:
+              | "present"
+              | "absent"
+              | "leave"
+              | "weekend"
+              | "holiday"
+              | null = rec?.status === "present"
+              ? "present"
+              : rec?.status === "absent"
+                ? "absent"
+                : rec?.status === "paid_leave"
+                  ? "leave"
+                  : holiday
+                    ? "holiday"
+                    : isWeekend
+                      ? "weekend"
+                      : null;
 
             return (
               <button
                 key={idx}
-                onClick={() => setSelected(key)}
+                onClick={() => !isLoading && setSelected(key)}
+                disabled={isLoading}
                 className={cn(
                   "group relative flex h-20 flex-col items-start justify-between rounded-[8px] border p-2 text-left transition-colors hover:bg-secondary/40 md:h-24",
                   isToday
@@ -204,7 +251,8 @@ export function CalendarView({
                   status === "absent" && "bg-destructive/5",
                   status === "leave" && "bg-warning/5",
                   status === "holiday" && "bg-info/5",
-                  status === "weekend" && "opacity-70"
+                  status === "weekend" && "opacity-70",
+                  isLoading && "cursor-default"
                 )}
               >
                 <div className="flex w-full items-center justify-between">
@@ -218,31 +266,39 @@ export function CalendarView({
                   </span>
                   {status && <StatusDot status={status} />}
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  {rec?.clockIn && (
-                    <span className="font-mono text-[10px] text-muted-foreground tabular">
-                      {formatTimeShort(rec.clockIn)}
-                      {rec.clockOut && ` → ${formatTimeShort(rec.clockOut)}`}
-                    </span>
-                  )}
-                  {rec?.clockIn && rec?.clockOut && (
-                    <span className="font-mono text-[10px] text-foreground/80 tabular">
-                      {formatHours(
-                        computeWorkedHours(
-                          new Date(rec.clockIn),
-                          new Date(rec.clockOut)
-                        )
+                <div className="flex w-full flex-col gap-0.5">
+                  {isLoading ? (
+                    <CellSkeleton />
+                  ) : (
+                    <>
+                      {rec?.clockIn && (
+                        <span className="font-mono text-[10px] text-muted-foreground tabular">
+                          {formatTimeShort(rec.clockIn)}
+                          {rec.clockOut && ` → ${formatTimeShort(rec.clockOut)}`}
+                        </span>
                       )}
-                      h
-                    </span>
-                  )}
-                  {rec?.overtimeChunks ? (
-                    <span className="text-[10px] text-warning tabular">
-                      +{rec.overtimeChunks} OT
-                    </span>
-                  ) : null}
-                  {holiday && !rec && (
-                    <span className="truncate text-[10px] text-info">{holiday}</span>
+                      {rec?.clockIn && rec?.clockOut && (
+                        <span className="font-mono text-[10px] text-foreground/80 tabular">
+                          {formatHours(
+                            computeWorkedHours(
+                              new Date(rec.clockIn),
+                              new Date(rec.clockOut)
+                            )
+                          )}
+                          h
+                        </span>
+                      )}
+                      {rec?.overtimeChunks ? (
+                        <span className="text-[10px] text-warning tabular">
+                          +{rec.overtimeChunks} OT
+                        </span>
+                      ) : null}
+                      {holiday && !rec && (
+                        <span className="truncate text-[10px] text-info">
+                          {holiday}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               </button>
@@ -266,6 +322,23 @@ export function CalendarView({
         />
       )}
     </div>
+  );
+}
+
+function StatSkeleton({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </span>
+      <span className="h-7 w-16 animate-pulse rounded bg-muted-foreground/15" />
+    </div>
+  );
+}
+
+function CellSkeleton() {
+  return (
+    <span className="h-2.5 w-3/5 animate-pulse rounded bg-muted-foreground/15" />
   );
 }
 
