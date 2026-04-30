@@ -31,15 +31,9 @@ export default async function TodayPage() {
     summarizeYear(userId, today.getFullYear()),
   ]);
 
-  const state: "in" | "out" | "done" =
-    todayRec?.clockIn && todayRec?.clockOut
-      ? "done"
-      : todayRec?.clockIn
-        ? "in"
-        : "out";
-  const sinceISO =
-    state === "in" ? todayRec?.clockIn?.toISOString() ?? null : null;
-  const lastClockOut = todayRec?.clockOut?.toISOString() ?? null;
+  const clockInISO = todayRec?.clockIn?.toISOString() ?? null;
+  const clockOutISO = todayRec?.clockOut?.toISOString() ?? null;
+  const overtimeChunks = todayRec?.overtimeChunks ?? 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -57,9 +51,9 @@ export default async function TodayPage() {
       {/* HERO Clock In/Out */}
       <div className="animate-reveal delay-100">
         <TodayPanel
-          state={state}
-          sinceISO={sinceISO}
-          lastClockOut={lastClockOut}
+          initialClockIn={clockInISO}
+          initialClockOut={clockOutISO}
+          initialOvertimeChunks={overtimeChunks}
           shift={ctx.shift}
           shiftLabel={shiftLabel(ctx.shift)}
         />
