@@ -83,18 +83,38 @@ export function computeWorkedHours(
 }
 
 /**
- * Compute overtime chunks earned for a given shift and clock-out time.
+ * Round a Date up to the next :00 or :30 mark. Idempotent at exact half/full
+ * hours. Drops seconds and milliseconds.
+ */
+export function roundUpToHalfHour(d: Date): Date {
+  const out = new Date(d);
+  out.setSeconds(0, 0);
+  const m = out.getMinutes();
+  if (m === 0 || m === 30) return out;
+  if (m < 30) out.setMinutes(30);
+  else {
+    out.setMinutes(0);
+    out.setHours(out.getHours() + 1);
+  }
+  return out;
+}
+
+/**
+ * Compute overtime chunks earned for a clock-in/out pair.
  *
- * Rule (from policy):
- *   - Shift end + 30 min checkout window does NOT count.
- *   - Each subsequent 30-min chunk fully completed counts as 1 chunk.
+ * Eligibility starts at the LATER of:
+ *   1. clockIn + 9h (8 worked + 1 break), rounded UP to the next :00 or :30
+ *   2. shift end + 30-min checkout window
  *
- * Example for first shift (ends 7 PM):
- *   - Clock-out at 7:25 PM → 0 chunks (within window)
- *   - Clock-out at 7:30 PM → 0 chunks (window just closed, no overtime yet)
- *   - Clock-out at 8:00 PM → 1 chunk (7:30–8:00 PM)
- *   - Clock-out at 8:30 PM → 2 chunks
- *   - Clock-out at 8:45 PM → 2 chunks (third chunk not yet complete)
+ * Each fully-completed 30-min chunk after that point counts as one chunk.
+ *
+ * Example (first shift, ends 7 PM, clock-in 10:15 AM):
+ *   - Personal end = 10:15 + 9h = 7:15 PM → round up to 7:30 PM
+ *   - Window end   = 7:00 PM + 30 min    = 7:30 PM
+ *   - OT starts at 7:30 PM
+ *   - Clock-out 7:59 PM → 0 chunks
+ *   - Clock-out 8:00 PM → 1 chunk
+ *   - Clock-out 8:30 PM → 2 chunks
  */
 export function computeOvertimeChunks(
   clockIn: Date | null,
@@ -102,14 +122,20 @@ export function computeOvertimeChunks(
   shift: Shift
 ): number {
   if (!clockIn || !clockOut) return 0;
+  const personalEnd = roundUpToHalfHour(
+    new Date(clockIn.getTime() + 9 * 60 * 60_000)
+  );
   const shiftEnd = getShiftEndForDate(clockIn, shift);
   const windowEnd = new Date(
     shiftEnd.getTime() + POLICY.CHECKOUT_WINDOW_MINUTES * 60_000
   );
-  const overtimeMs = clockOut.getTime() - windowEnd.getTime();
-  if (overtimeMs <= 0) return 0;
+  const otStart = new Date(
+    Math.max(personalEnd.getTime(), windowEnd.getTime())
+  );
+  const otMs = clockOut.getTime() - otStart.getTime();
+  if (otMs <= 0) return 0;
   const chunkMs = POLICY.OVERTIME_CHUNK_MINUTES * 60_000;
-  return Math.floor(overtimeMs / chunkMs);
+  return Math.floor(otMs / chunkMs);
 }
 
 /**
