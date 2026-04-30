@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { formatHours } from "@/lib/utils";
 
 interface MonthRow {
   userId: string;
@@ -218,7 +219,7 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </Td>
-                    <Td align="right" mono>{r.totalHours.toFixed(2)}</Td>
+                    <Td align="right" mono>{formatHours(r.totalHours)}</Td>
                     <Td align="right" mono>{r.expectedHours.toFixed(0)}</Td>
                     <Td align="right" mono>{r.daysPresent}</Td>
                     <Td align="right" mono>{r.daysAbsent}</Td>
@@ -255,7 +256,7 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
                     <Td>
                       <div className="font-medium text-foreground">{r.userName}</div>
                     </Td>
-                    <Td align="right" mono>{r.totalHours.toFixed(2)}</Td>
+                    <Td align="right" mono>{formatHours(r.totalHours)}</Td>
                     <Td align="right" mono>{r.totalOvertimeChunks}</Td>
                     <Td align="right" mono>{r.paidLeavesUsed}</Td>
                     <Td align="right" mono>{r.paidLeavesRemaining}</Td>

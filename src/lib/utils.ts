@@ -36,6 +36,14 @@ export function isWeekend(date: Date): boolean {
   return day === 0 || day === 6;
 }
 
-export function formatHours(hours: number, places = 2): string {
-  return hours.toFixed(places);
+/**
+ * Format a decimal hour count as `H:MM` (e.g. 7.87 → "7:52").
+ * Used everywhere on screen; CSV exports keep raw decimal so spreadsheet
+ * users can still sum/multiply.
+ */
+export function formatHours(hours: number): string {
+  const totalMinutes = Math.max(0, Math.round(hours * 60));
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
 }
