@@ -75,7 +75,6 @@ export async function POST(req: Request) {
     .from(users)
     .where(eq(users.role, "admin"));
   if (admins.length) {
-    await db.insert(supportMessages).values([]).then(() => {}).catch(() => {});
     for (const a of admins) {
       await notify({
         userId: a.id,
