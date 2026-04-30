@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Stat } from "@/components/ui/stat";
 import { DayEditor } from "./day-editor";
 import type { MonthSummary } from "@/lib/attendance";
-import type { Shift } from "@/lib/policy";
+import { computeWorkedHours, type Shift } from "@/lib/policy";
+import { formatHours } from "@/lib/utils";
 
 interface RecordView {
   id: string;
@@ -129,7 +130,7 @@ export function CalendarView({
         <Card className="p-4">
           <Stat
             label="Hours worked"
-            value={summary.totalHours.toFixed(1)}
+            value={formatHours(summary.totalHours)}
             unit={`/ ${summary.expectedHours.toFixed(0)} h`}
           />
         </Card>
@@ -222,6 +223,17 @@ export function CalendarView({
                     <span className="font-mono text-[10px] text-muted-foreground tabular">
                       {formatTimeShort(rec.clockIn)}
                       {rec.clockOut && ` → ${formatTimeShort(rec.clockOut)}`}
+                    </span>
+                  )}
+                  {rec?.clockIn && rec?.clockOut && (
+                    <span className="font-mono text-[10px] text-foreground/80 tabular">
+                      {formatHours(
+                        computeWorkedHours(
+                          new Date(rec.clockIn),
+                          new Date(rec.clockOut)
+                        )
+                      )}
+                      h
                     </span>
                   )}
                   {rec?.overtimeChunks ? (

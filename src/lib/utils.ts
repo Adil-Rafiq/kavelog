@@ -35,3 +35,7 @@ export function isWeekend(date: Date): boolean {
   const day = date.getDay();
   return day === 0 || day === 6;
 }
+
+export function formatHours(hours: number, places = 2): string {
+  return hours.toFixed(places);
+}

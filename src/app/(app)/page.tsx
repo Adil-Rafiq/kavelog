@@ -6,7 +6,7 @@ import {
   summarizeMonth,
   summarizeYear,
 } from "@/lib/attendance";
-import { toDateKey } from "@/lib/utils";
+import { formatHours, toDateKey } from "@/lib/utils";
 import { shiftLabel } from "@/lib/policy";
 import { TodayPanel } from "./today-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,8 +31,12 @@ export default async function TodayPage() {
     summarizeYear(userId, today.getFullYear()),
   ]);
 
-  const state: "in" | "out" =
-    todayRec?.clockIn && !todayRec?.clockOut ? "in" : "out";
+  const state: "in" | "out" | "done" =
+    todayRec?.clockIn && todayRec?.clockOut
+      ? "done"
+      : todayRec?.clockIn
+        ? "in"
+        : "out";
   const sinceISO =
     state === "in" ? todayRec?.clockIn?.toISOString() ?? null : null;
   const lastClockOut = todayRec?.clockOut?.toISOString() ?? null;
@@ -83,7 +87,7 @@ export default async function TodayPage() {
           <Card className="p-5">
             <Stat
               label="Hours worked"
-              value={month.totalHours.toFixed(1)}
+              value={formatHours(month.totalHours)}
               unit={`/ ${month.expectedHours.toFixed(0)} h`}
               hint={`Target adjusted for holidays`}
             />
@@ -126,7 +130,7 @@ export default async function TodayPage() {
           <CardContent className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
             <Stat
               label="Total hours"
-              value={year.totalHours.toFixed(1)}
+              value={formatHours(year.totalHours)}
               unit="h"
             />
             <Stat

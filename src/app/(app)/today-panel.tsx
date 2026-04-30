@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { ClockButton } from "@/components/clock-button";
 import { toast } from "@/components/ui/toaster";
-import { Badge } from "@/components/ui/badge";
 import type { Shift } from "@/lib/policy";
 
 export function TodayPanel({
@@ -14,7 +15,7 @@ export function TodayPanel({
   shift,
   shiftLabel,
 }: {
-  state: "in" | "out";
+  state: "in" | "out" | "done";
   sinceISO: string | null;
   lastClockOut: string | null;
   shift: Shift;
@@ -42,7 +43,7 @@ export function TodayPanel({
       setOutAt(null);
       toast({ kind: "success", title: "Clocked in", description: "Have a great shift." });
     } else {
-      setState("out");
+      setState("done");
       setOutAt(data.record.clockOut);
       setSinceISO(null);
       toast({
@@ -72,12 +73,20 @@ export function TodayPanel({
         onAction={action}
         shiftLabel={shiftLabel}
       />
-      {state === "out" && formattedOut && (
-        <div className="flex items-center gap-2 px-1">
-          <Badge variant="present">Done for today</Badge>
+      {state === "done" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <span className="text-xs text-muted-foreground tabular">
-            Clocked out at {formattedOut}
+            {formattedOut
+              ? `Clocked out at ${formattedOut}`
+              : "Done for today"}
           </span>
+          <Link
+            href="/calendar"
+            className="inline-flex items-center gap-1 text-xs text-foreground underline-offset-4 hover:text-primary hover:underline"
+          >
+            Edit today
+            <ArrowRight size={12} />
+          </Link>
         </div>
       )}
       {!shift && (

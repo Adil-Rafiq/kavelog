@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 
-type State = "out" | "in";
+type State = "out" | "in" | "done";
 
 interface ClockButtonProps {
   /** Current state — "out" means user can clock in; "in" means user can clock out. */
@@ -68,18 +68,21 @@ export function ClockButton({
   };
 
   const isIn = state === "in";
+  const isDone = state === "done";
 
   return (
     <button
       type="button"
       onClick={handlePress}
-      disabled={disabled || pending}
+      disabled={disabled || isDone || pending}
       className={cn(
         "stamp signal-ring relative w-full overflow-hidden rounded-[16px] border text-left",
         "transition-colors",
-        isIn
-          ? "border-success/30 bg-card"
-          : "border-primary/40 bg-card hover:border-primary/70",
+        isDone
+          ? "border-border/60 bg-card"
+          : isIn
+            ? "border-success/30 bg-card"
+            : "border-primary/40 bg-card hover:border-primary/70",
         "disabled:opacity-60",
         pressing && "animate-stamp-flash"
       )}
@@ -106,10 +109,18 @@ export function ClockButton({
             <span
               className={cn(
                 "inline-block h-1.5 w-1.5 rounded-full",
-                isIn ? "bg-success animate-pulse-soft" : "bg-primary animate-pulse-soft"
+                isDone
+                  ? "bg-success"
+                  : isIn
+                    ? "bg-success animate-pulse-soft"
+                    : "bg-primary animate-pulse-soft"
               )}
             />
-            {isIn ? "Clocked in" : "Ready to clock in"}
+            {isDone
+              ? "Done for today"
+              : isIn
+                ? "Clocked in"
+                : "Ready to clock in"}
             {sinceLabel && (
               <span className="text-muted-foreground/70 normal-case tracking-normal">
                 · since {sinceLabel}
@@ -141,18 +152,24 @@ export function ClockButton({
         <div
           className={cn(
             "group inline-flex items-center gap-3 self-start rounded-[12px] px-5 py-3 text-sm font-medium transition-colors sm:self-auto",
-            isIn
-              ? "bg-foreground/95 text-background"
-              : "bg-primary text-primary-foreground"
+            isDone
+              ? "bg-secondary text-muted-foreground"
+              : isIn
+                ? "bg-foreground/95 text-background"
+                : "bg-primary text-primary-foreground"
           )}
         >
           <span className="uppercase tracking-[0.16em] text-[12px]">
-            {isIn ? "Clock out" : "Clock in"}
+            {isDone ? "Done" : isIn ? "Clock out" : "Clock in"}
           </span>
-          <ArrowRight
-            size={16}
-            className="transition-transform group-hover:translate-x-0.5"
-          />
+          {isDone ? (
+            <Check size={16} />
+          ) : (
+            <ArrowRight
+              size={16}
+              className="transition-transform group-hover:translate-x-0.5"
+            />
+          )}
         </div>
       </div>
     </button>
