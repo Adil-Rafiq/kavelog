@@ -75,7 +75,7 @@ The project is built for Vercel:
 
 1. Push to GitHub.
 2. Import the repo into Vercel.
-3. Add environment variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `CRON_SECRET`).
+3. Add environment variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `CRON_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `NEXT_PUBLIC_APP_URL`).
 4. Deploy.
 
 The `vercel.json` schedules `/api/cron/auto-absent` daily at 00:05 UTC to mark missed weekday clock-ins as absent. Set `CRON_SECRET` to protect the endpoint.
@@ -85,7 +85,7 @@ The `vercel.json` schedules `/api/cron/auto-absent` daily at 00:05 UTC to mark m
 ```
 src/
   app/
-    (auth)/         # /login, /register
+    (auth)/         # /login, /register, /forgot, /reset
     (app)/          # authenticated app: dashboard, calendar, reports, support, admin
     api/            # API routes
     pending/        # holding page for users awaiting approval

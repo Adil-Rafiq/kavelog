@@ -211,6 +211,30 @@ export const supportMessages = pgTable(
 );
 
 // ============================================================================
+// PASSWORD RESET TOKENS
+// ============================================================================
+
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tokenIdx: uniqueIndex("password_reset_token_idx").on(t.tokenHash),
+    userIdx: index("password_reset_user_idx").on(t.userId),
+  })
+);
+
+// ============================================================================
 // SETTINGS (key-value global app settings)
 // ============================================================================
 
@@ -304,6 +328,8 @@ export type SupportTicket = typeof supportTickets.$inferSelect;
 export type NewSupportTicket = typeof supportTickets.$inferInsert;
 export type SupportMessage = typeof supportMessages.$inferSelect;
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type Setting = typeof settings.$inferSelect;
 
 // ============================================================================
