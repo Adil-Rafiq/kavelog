@@ -1,3 +1,9 @@
+[ ] Show password UX
+[ ] Calendar page view broken on mobile
+[ ] Highlight the holiday on the calendar, also show it on the Today page as well
+[ ] If possible and makes sense, we can add more stats in the report page like graphs etc
+
+
 [x] Are we taking care of minutes as well? I can see total hours as whole number even one I add some odd minutes as well
 [x] The time selection drop down button does not appear. The either move it to the left and more visible or the entire input should be dropdown.
 [x] When the user is done for the day, the Clock in button on the dashboard(Today) still appears to be clickable.
