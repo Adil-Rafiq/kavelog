@@ -830,7 +830,7 @@ function DailyHoursChart({
           return (
             <div
               key={d.date}
-              className="group relative flex flex-1 flex-col items-center"
+              className="group relative flex h-full flex-1 flex-col items-center"
               title={tooltip}
             >
               <div
