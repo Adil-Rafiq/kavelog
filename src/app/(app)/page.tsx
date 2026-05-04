@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { auth } from "@/auth";
 import {
+  getHolidaysBetween,
   getRecord,
   getUserContext,
   summarizeMonth,
@@ -9,7 +11,7 @@ import {
 import { formatHours, toDateKey } from "@/lib/utils";
 import { shiftLabel } from "@/lib/policy";
 import { TodayPanel } from "./today-panel";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Stat } from "@/components/ui/stat";
 import { DotDivider } from "@/components/ui/divider";
 import { POLICY } from "@/lib/policy";
@@ -25,11 +27,13 @@ export default async function TodayPage() {
 
   const today = new Date();
   const todayKey = toDateKey(today);
-  const [todayRec, month, year] = await Promise.all([
+  const [todayRec, month, year, holidaysToday] = await Promise.all([
     getRecord(userId, todayKey),
     summarizeMonth(userId, today.getFullYear(), today.getMonth()),
     summarizeYear(userId, today.getFullYear()),
+    getHolidaysBetween(todayKey, todayKey),
   ]);
+  const todaysHoliday = holidaysToday[0]?.name ?? null;
 
   const clockInISO = todayRec?.clockIn?.toISOString() ?? null;
   const clockOutISO = todayRec?.clockOut?.toISOString() ?? null;
@@ -47,6 +51,20 @@ export default async function TodayPage() {
           {session.user.name?.split(" ")[0] || "there"}
         </h1>
       </div>
+
+      {todaysHoliday && (
+        <div className="flex items-center gap-3 rounded-[12px] border border-info/40 bg-info/10 px-4 py-3 ring-1 ring-info/20 animate-reveal">
+          <Sparkles size={16} className="shrink-0 text-info" />
+          <div className="flex min-w-0 flex-col">
+            <span className="text-[10px] uppercase tracking-[0.22em] text-info">
+              Holiday today
+            </span>
+            <span className="truncate text-sm text-foreground">
+              {todaysHoliday}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* HERO Clock In/Out */}
       <div className="animate-reveal delay-100">

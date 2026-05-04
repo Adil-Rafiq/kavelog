@@ -246,11 +246,14 @@ export function CalendarView({
                   "group relative flex h-16 min-w-0 flex-col items-start justify-between overflow-hidden rounded-[8px] border p-1.5 text-left transition-colors hover:bg-secondary/40 sm:h-20 sm:p-2 md:h-24",
                   isToday
                     ? "border-primary/60 bg-primary/5"
-                    : "border-border/60",
-                  status === "present" && "bg-success/5",
-                  status === "absent" && "bg-destructive/5",
-                  status === "leave" && "bg-warning/5",
-                  status === "holiday" && "bg-info/5",
+                    : holiday
+                      ? "border-info/50 ring-1 ring-info/30"
+                      : "border-border/60",
+                  // rec status bg wins; otherwise holiday tint, otherwise nothing
+                  rec?.status === "present" && "bg-success/5",
+                  rec?.status === "absent" && "bg-destructive/5",
+                  rec?.status === "paid_leave" && "bg-warning/5",
+                  holiday && !rec && "bg-info/10",
                   status === "weekend" && "opacity-70",
                   isLoading && "cursor-default"
                 )}
@@ -264,7 +267,10 @@ export function CalendarView({
                   >
                     {String(d.getDate()).padStart(2, "0")}
                   </span>
-                  {status && <StatusDot status={status} />}
+                  <span className="flex items-center gap-1">
+                    {holiday && rec && <StatusDot status="holiday" />}
+                    {status && <StatusDot status={status} />}
+                  </span>
                 </div>
                 <div className="flex w-full min-w-0 flex-col gap-0.5">
                   {isLoading ? (
@@ -306,8 +312,8 @@ export function CalendarView({
                           +{rec.overtimeChunks} OT
                         </span>
                       ) : null}
-                      {holiday && !rec && (
-                        <span className="truncate text-[10px] text-info">
+                      {holiday && (
+                        <span className="truncate text-[10px] font-medium text-info">
                           {holiday}
                         </span>
                       )}
