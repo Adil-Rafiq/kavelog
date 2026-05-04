@@ -32,6 +32,15 @@ interface YearRow {
   totalHours: number;
 }
 
+interface DailyEntry {
+  date: string;
+  hours: number;
+  status: "present" | "absent" | "paid_leave" | null;
+  overtimeChunks: number;
+  isHoliday: boolean;
+  isWeekend: boolean;
+}
+
 const MONTHS = [
   "January",
   "February",
@@ -60,6 +69,7 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
   const [departments, setDepartments] = React.useState<{ id: string; name: string }[]>([]);
   const [monthRows, setMonthRows] = React.useState<MonthRow[]>([]);
   const [yearRows, setYearRows] = React.useState<YearRow[]>([]);
+  const [daily, setDaily] = React.useState<DailyEntry[] | null>(null);
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -80,8 +90,13 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
     if (departmentId) url.searchParams.set("departmentId", departmentId);
     const res = await fetch(url.toString());
     const data = await res.json();
-    if (view === "month") setMonthRows(data.rows ?? []);
-    else setYearRows(data.rows ?? []);
+    if (view === "month") {
+      setMonthRows(data.rows ?? []);
+      setDaily(data.daily ?? null);
+    } else {
+      setYearRows(data.rows ?? []);
+      setDaily(null);
+    }
     setLoading(false);
   }, [year, month, scope, view, departmentId]);
 
@@ -279,12 +294,25 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <HoursVsTargetChart rows={monthRows} />
-            <StatusBreakdownChart
-              present={monthAggregate.present}
-              absent={monthAggregate.absent}
-              leave={monthAggregate.leave}
-            />
+            {monthRows.length === 1 && daily ? (
+              <>
+                <DailyHoursChart daily={daily} year={year} month0={month - 1} />
+                <StatusBreakdownChart
+                  present={monthAggregate.present}
+                  absent={monthAggregate.absent}
+                  leave={monthAggregate.leave}
+                />
+              </>
+            ) : (
+              <>
+                <HoursVsTargetChart rows={monthRows} />
+                <StatusBreakdownChart
+                  present={monthAggregate.present}
+                  absent={monthAggregate.absent}
+                  leave={monthAggregate.leave}
+                />
+              </>
+            )}
           </div>
         </>
       )}
@@ -596,6 +624,98 @@ function StatusBreakdownChart({
         ))}
       </div>
     </Card>
+  );
+}
+
+/**
+ * Vertical bar chart of daily hours for a single user across one month.
+ * Color-codes status (present/absent/leave) and dims weekends; holidays
+ * get an info-tinted bar background.
+ */
+function DailyHoursChart({
+  daily,
+  year,
+  month0,
+}: {
+  daily: DailyEntry[];
+  year: number;
+  month0: number;
+}) {
+  const max = Math.max(8, ...daily.map((d) => d.hours));
+  const monthLabel = new Date(year, month0).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex items-baseline justify-between">
+        <h3 className="text-sm font-medium text-foreground">Daily hours</h3>
+        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          {monthLabel}
+        </span>
+      </div>
+      <div className="flex h-40 items-end gap-[2px]">
+        {daily.map((d) => {
+          const dayNum = parseInt(d.date.slice(-2), 10);
+          const heightPct = max > 0 ? (d.hours / max) * 100 : 0;
+          const barColor =
+            d.status === "present"
+              ? "bg-success"
+              : d.status === "paid_leave"
+                ? "bg-warning"
+                : d.status === "absent"
+                  ? "bg-destructive/70"
+                  : "bg-muted-foreground/20";
+          const tooltip = d.hours
+            ? `${d.date}: ${formatHours(d.hours)}h${d.overtimeChunks ? ` +${d.overtimeChunks} OT` : ""}`
+            : `${d.date}: ${d.status ?? (d.isHoliday ? "holiday" : d.isWeekend ? "weekend" : "no record")}`;
+          return (
+            <div
+              key={d.date}
+              className="group relative flex flex-1 flex-col items-center"
+              title={tooltip}
+            >
+              <div
+                className={cn(
+                  "flex w-full flex-1 items-end rounded-t-sm",
+                  d.isHoliday && "bg-info/10",
+                  d.isWeekend && !d.status && "opacity-50"
+                )}
+              >
+                <div
+                  className={cn("w-full rounded-t-sm transition-all", barColor)}
+                  style={{ height: `${heightPct}%` }}
+                />
+              </div>
+              <span className="mt-1 font-mono text-[8px] tabular text-muted-foreground/60">
+                {dayNum}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+        <LegendSwatch className="bg-success" label="Present" />
+        <LegendSwatch className="bg-warning" label="Leave" />
+        <LegendSwatch className="bg-destructive/70" label="Absent" />
+        <LegendSwatch className="bg-info/30" label="Holiday" />
+      </div>
+    </Card>
+  );
+}
+
+function LegendSwatch({
+  className,
+  label,
+}: {
+  className: string;
+  label: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("h-2 w-2 rounded-sm", className)} />
+      {label}
+    </span>
   );
 }
 

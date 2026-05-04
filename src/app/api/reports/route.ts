@@ -4,7 +4,14 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { departments, users } from "@/db/schema";
 import { auth } from "@/auth";
-import { summarizeMonth, summarizeYear } from "@/lib/attendance";
+import {
+  getHolidaysBetween,
+  getRecordsBetween,
+  summarizeMonth,
+  summarizeYear,
+} from "@/lib/attendance";
+import { computeWorkedHours, isWeekend } from "@/lib/policy";
+import { toDateKey } from "@/lib/utils";
 
 const querySchema = z.object({
   year: z.coerce.number().int().min(2000).max(3000),
@@ -48,7 +55,52 @@ export async function GET(req: Request) {
         };
       })
     );
-    return NextResponse.json({ rows });
+
+    // For single-user (self) views, also include a daily breakdown so the
+    // client can render a per-day chart instead of a noisy "Top 1" bar.
+    let daily:
+      | {
+          date: string;
+          hours: number;
+          status: "present" | "absent" | "paid_leave" | null;
+          overtimeChunks: number;
+          isHoliday: boolean;
+          isWeekend: boolean;
+        }[]
+      | undefined;
+    if (targetUsers.length === 1) {
+      const u = targetUsers[0];
+      const start = new Date(q.year, month0, 1);
+      const end = new Date(q.year, month0 + 1, 0);
+      const startKey = toDateKey(start);
+      const endKey = toDateKey(end);
+      const [records, hols] = await Promise.all([
+        getRecordsBetween(u.id, startKey, endKey),
+        getHolidaysBetween(startKey, endKey),
+      ]);
+      const recMap = new Map(records.map((r) => [r.date, r]));
+      const holSet = new Set(hols.map((h) => h.date));
+      daily = [];
+      const daysInMonth = end.getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = new Date(q.year, month0, d);
+        const key = toDateKey(dt);
+        const rec = recMap.get(key);
+        daily.push({
+          date: key,
+          hours:
+            rec && rec.status === "present"
+              ? computeWorkedHours(rec.clockIn, rec.clockOut)
+              : 0,
+          status: rec?.status ?? null,
+          overtimeChunks: rec?.overtimeChunks ?? 0,
+          isHoliday: holSet.has(key),
+          isWeekend: isWeekend(dt),
+        });
+      }
+    }
+
+    return NextResponse.json({ rows, daily });
   } else {
     const rows = await Promise.all(
       targetUsers.map(async (u) => {
