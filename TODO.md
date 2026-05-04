@@ -1,4 +1,4 @@
-[ ] Show password UX
+[x] Show password UX
 [ ] Calendar page view broken on mobile
 [ ] Highlight the holiday on the calendar, also show it on the Today page as well
 [ ] If possible and makes sense, we can add more stats in the report page like graphs etc

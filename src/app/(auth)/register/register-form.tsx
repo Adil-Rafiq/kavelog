@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/toaster";
 
@@ -73,9 +74,8 @@ export function RegisterForm({ departments }: { departments: DepartmentOption[] 
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">Password (min 8 characters)</Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={8}

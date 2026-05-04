@@ -4,8 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "@/components/ui/toaster";
 
 export function ResetForm() {
@@ -79,9 +79,8 @@ export function ResetForm() {
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">New password (min 8 characters)</Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={8}
@@ -91,9 +90,8 @@ export function ResetForm() {
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="confirm">Confirm password</Label>
-        <Input
+        <PasswordInput
           id="confirm"
-          type="password"
           autoComplete="new-password"
           required
           minLength={8}
