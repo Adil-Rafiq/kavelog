@@ -27,13 +27,19 @@ export default async function TodayPage() {
 
   const today = new Date();
   const todayKey = toDateKey(today);
-  const [todayRec, month, year, holidaysToday] = await Promise.all([
+  const horizonKey = toDateKey(
+    new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60)
+  );
+  const [todayRec, month, year, upcomingHolidays] = await Promise.all([
     getRecord(userId, todayKey),
     summarizeMonth(userId, today.getFullYear(), today.getMonth()),
     summarizeYear(userId, today.getFullYear()),
-    getHolidaysBetween(todayKey, todayKey),
+    getHolidaysBetween(todayKey, horizonKey),
   ]);
-  const todaysHoliday = holidaysToday[0]?.name ?? null;
+  const todaysHoliday =
+    upcomingHolidays.find((h) => h.date === todayKey)?.name ?? null;
+  const nextHoliday =
+    upcomingHolidays.find((h) => h.date > todayKey) ?? null;
 
   const clockInISO = todayRec?.clockIn?.toISOString() ?? null;
   const clockOutISO = todayRec?.clockOut?.toISOString() ?? null;
@@ -50,6 +56,15 @@ export default async function TodayPage() {
           <span className="wordmark text-primary mr-2">Hello,</span>
           {session.user.name?.split(" ")[0] || "there"}
         </h1>
+        {!todaysHoliday && nextHoliday && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Next holiday:{" "}
+            <span className="text-foreground">{nextHoliday.name}</span>{" "}
+            <span className="tabular text-muted-foreground/80">
+              · {formatHolidayDate(nextHoliday.date, todayKey)}
+            </span>
+          </p>
+        )}
       </div>
 
       {todaysHoliday && (
@@ -164,4 +179,20 @@ export default async function TodayPage() {
       </section>
     </div>
   );
+}
+
+function formatHolidayDate(holidayKey: string, todayKey: string): string {
+  const d = new Date(holidayKey + "T00:00:00");
+  const label = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  const [hy, hm, hd] = holidayKey.split("-").map(Number);
+  const [ty, tm, td] = todayKey.split("-").map(Number);
+  const days = Math.round(
+    (Date.UTC(hy, hm - 1, hd) - Date.UTC(ty, tm - 1, td)) /
+      (1000 * 60 * 60 * 24)
+  );
+  if (days === 1) return `${label} (tomorrow)`;
+  return `${label} (in ${days} days)`;
 }
