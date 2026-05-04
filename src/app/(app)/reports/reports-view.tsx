@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Download } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Stat } from "@/components/ui/stat";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,14 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
   const [yearRows, setYearRows] = React.useState<YearRow[]>([]);
   const [daily, setDaily] = React.useState<DailyEntry[] | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [monthSort, setMonthSort] = React.useState<{
+    key: keyof MonthRow;
+    dir: "asc" | "desc";
+  }>({ key: "userName", dir: "asc" });
+  const [yearSort, setYearSort] = React.useState<{
+    key: keyof YearRow;
+    dir: "asc" | "desc";
+  }>({ key: "userName", dir: "asc" });
 
   React.useEffect(() => {
     if (role !== "admin") return;
@@ -152,6 +160,30 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
     };
   }, [monthRows]);
 
+  const sortedMonthRows = React.useMemo(
+    () => sortRows(monthRows, monthSort.key, monthSort.dir),
+    [monthRows, monthSort]
+  );
+  const sortedYearRows = React.useMemo(
+    () => sortRows(yearRows, yearSort.key, yearSort.dir),
+    [yearRows, yearSort]
+  );
+
+  function toggleMonthSort(key: keyof MonthRow) {
+    setMonthSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: defaultDirFor(key) }
+    );
+  }
+  function toggleYearSort(key: keyof YearRow) {
+    setYearSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: defaultDirFor(key) }
+    );
+  }
+
   const yearAggregate = React.useMemo(() => {
     if (yearRows.length === 0) {
       return { totalHours: 0, ot: 0, leavesUsed: 0 };
@@ -171,7 +203,12 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
     <div className="flex flex-col gap-5">
       {/* Filters */}
       <Card className="p-4">
-        <CardContent className="grid grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-5">
+        <CardContent
+          className={cn(
+            "grid grid-cols-1 gap-4 p-0 sm:grid-cols-2",
+            role === "admin" ? "lg:grid-cols-5" : "lg:grid-cols-3"
+          )}
+        >
           <div className="flex flex-col gap-1.5">
             <Label>View</Label>
             <Select
@@ -371,39 +408,59 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
             <table className="w-full min-w-[700px] border-collapse text-sm">
               <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 <tr>
-                  <Th>Employee</Th>
-                  <Th>Department</Th>
-                  <Th align="right">Hours</Th>
-                  <Th align="right">Target</Th>
-                  <Th align="right">Present</Th>
-                  <Th align="right">Absent</Th>
-                  <Th align="right">Leave</Th>
-                  <Th align="right">OT chunks</Th>
+                  <SortTh sortKey="userName" sort={monthSort} onClick={toggleMonthSort}>
+                    Employee
+                  </SortTh>
+                  <SortTh sortKey="department" sort={monthSort} onClick={toggleMonthSort}>
+                    Department
+                  </SortTh>
+                  <SortTh align="right" sortKey="totalHours" sort={monthSort} onClick={toggleMonthSort}>
+                    Hours
+                  </SortTh>
+                  <SortTh align="right" sortKey="expectedHours" sort={monthSort} onClick={toggleMonthSort}>
+                    Target
+                  </SortTh>
+                  <SortTh align="right" sortKey="daysPresent" sort={monthSort} onClick={toggleMonthSort}>
+                    Present
+                  </SortTh>
+                  <SortTh align="right" sortKey="daysAbsent" sort={monthSort} onClick={toggleMonthSort}>
+                    Absent
+                  </SortTh>
+                  <SortTh align="right" sortKey="daysPaidLeave" sort={monthSort} onClick={toggleMonthSort}>
+                    Leave
+                  </SortTh>
+                  <SortTh align="right" sortKey="overtimeChunks" sort={monthSort} onClick={toggleMonthSort}>
+                    OT chunks
+                  </SortTh>
                 </tr>
               </thead>
               <tbody>
-                {monthRows.map((r) => (
-                  <tr key={r.userId} className="border-t border-border/50">
-                    <Td>
-                      <div className="font-medium text-foreground">{r.userName}</div>
-                      <div className="text-xs text-muted-foreground">{r.email}</div>
-                    </Td>
-                    <Td>
-                      {r.department ? (
-                        <Badge variant="outline">{r.department}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </Td>
-                    <Td align="right" mono>{formatHours(r.totalHours)}</Td>
-                    <Td align="right" mono>{r.expectedHours.toFixed(0)}</Td>
-                    <Td align="right" mono>{r.daysPresent}</Td>
-                    <Td align="right" mono>{r.daysAbsent}</Td>
-                    <Td align="right" mono>{r.daysPaidLeave}</Td>
-                    <Td align="right" mono>{r.overtimeChunks}</Td>
-                  </tr>
-                ))}
-                {monthRows.length === 0 && (
+                {loading && monthRows.length === 0 ? (
+                  <SkeletonRows cols={8} />
+                ) : (
+                  sortedMonthRows.map((r) => (
+                    <tr key={r.userId} className="border-t border-border/50">
+                      <Td>
+                        <div className="font-medium text-foreground">{r.userName}</div>
+                        <div className="text-xs text-muted-foreground">{r.email}</div>
+                      </Td>
+                      <Td>
+                        {r.department ? (
+                          <Badge variant="outline">{r.department}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </Td>
+                      <Td align="right" mono>{formatHours(r.totalHours)}</Td>
+                      <Td align="right" mono>{r.expectedHours.toFixed(0)}</Td>
+                      <Td align="right" mono>{r.daysPresent}</Td>
+                      <Td align="right" mono>{r.daysAbsent}</Td>
+                      <Td align="right" mono>{r.daysPaidLeave}</Td>
+                      <Td align="right" mono>{r.overtimeChunks}</Td>
+                    </tr>
+                  ))
+                )}
+                {!loading && monthRows.length === 0 && (
                   <tr>
                     <td
                       colSpan={8}
@@ -419,26 +476,40 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
             <table className="w-full min-w-[600px] border-collapse text-sm">
               <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 <tr>
-                  <Th>Employee</Th>
-                  <Th align="right">Total hours</Th>
-                  <Th align="right">OT chunks</Th>
-                  <Th align="right">Leaves used</Th>
-                  <Th align="right">Leaves left</Th>
+                  <SortTh sortKey="userName" sort={yearSort} onClick={toggleYearSort}>
+                    Employee
+                  </SortTh>
+                  <SortTh align="right" sortKey="totalHours" sort={yearSort} onClick={toggleYearSort}>
+                    Total hours
+                  </SortTh>
+                  <SortTh align="right" sortKey="totalOvertimeChunks" sort={yearSort} onClick={toggleYearSort}>
+                    OT chunks
+                  </SortTh>
+                  <SortTh align="right" sortKey="paidLeavesUsed" sort={yearSort} onClick={toggleYearSort}>
+                    Leaves used
+                  </SortTh>
+                  <SortTh align="right" sortKey="paidLeavesRemaining" sort={yearSort} onClick={toggleYearSort}>
+                    Leaves left
+                  </SortTh>
                 </tr>
               </thead>
               <tbody>
-                {yearRows.map((r) => (
-                  <tr key={r.userId} className="border-t border-border/50">
-                    <Td>
-                      <div className="font-medium text-foreground">{r.userName}</div>
-                    </Td>
-                    <Td align="right" mono>{formatHours(r.totalHours)}</Td>
-                    <Td align="right" mono>{r.totalOvertimeChunks}</Td>
-                    <Td align="right" mono>{r.paidLeavesUsed}</Td>
-                    <Td align="right" mono>{r.paidLeavesRemaining}</Td>
-                  </tr>
-                ))}
-                {yearRows.length === 0 && (
+                {loading && yearRows.length === 0 ? (
+                  <SkeletonRows cols={5} />
+                ) : (
+                  sortedYearRows.map((r) => (
+                    <tr key={r.userId} className="border-t border-border/50">
+                      <Td>
+                        <div className="font-medium text-foreground">{r.userName}</div>
+                      </Td>
+                      <Td align="right" mono>{formatHours(r.totalHours)}</Td>
+                      <Td align="right" mono>{r.totalOvertimeChunks}</Td>
+                      <Td align="right" mono>{r.paidLeavesUsed}</Td>
+                      <Td align="right" mono>{r.paidLeavesRemaining}</Td>
+                    </tr>
+                  ))
+                )}
+                {!loading && yearRows.length === 0 && (
                   <tr>
                     <td
                       colSpan={5}
@@ -473,6 +544,86 @@ function Th({
   );
 }
 
+function SortTh<K extends string>({
+  children,
+  align = "left",
+  sortKey,
+  sort,
+  onClick,
+}: {
+  children: React.ReactNode;
+  align?: "left" | "right";
+  sortKey: K;
+  sort: { key: K; dir: "asc" | "desc" };
+  onClick: (key: K) => void;
+}) {
+  const active = sort.key === sortKey;
+  const Icon = active
+    ? sort.dir === "asc"
+      ? ChevronUp
+      : ChevronDown
+    : ChevronsUpDown;
+  return (
+    <th
+      className={cn(
+        "px-4 py-3",
+        align === "right" ? "text-right" : "text-left"
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => onClick(sortKey)}
+        className={cn(
+          "inline-flex items-center gap-1 transition-colors hover:text-foreground",
+          align === "right" && "flex-row-reverse",
+          active && "text-foreground"
+        )}
+      >
+        {children}
+        <Icon size={11} className={cn(!active && "opacity-50")} />
+      </button>
+    </th>
+  );
+}
+
+function SkeletonRows({ cols }: { cols: number }) {
+  return (
+    <>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <tr key={i} className="border-t border-border/50">
+          {Array.from({ length: cols }).map((_, j) => (
+            <td key={j} className="px-4 py-3">
+              <span className="block h-3 w-full max-w-[80px] animate-pulse rounded bg-muted-foreground/15" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function defaultDirFor(key: string): "asc" | "desc" {
+  // Numeric columns default to descending (most-of-thing first); names asc.
+  return key === "userName" || key === "department" || key === "email"
+    ? "asc"
+    : "desc";
+}
+
+function sortRows<T>(rows: T[], key: keyof T, dir: "asc" | "desc"): T[] {
+  const sign = dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const av = a[key];
+    const bv = b[key];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (typeof av === "number" && typeof bv === "number") {
+      return (av - bv) * sign;
+    }
+    return String(av).localeCompare(String(bv)) * sign;
+  });
+}
+
 function Td({
   children,
   align = "left",
@@ -498,10 +649,12 @@ function Td({
  * with a marker line at the per-employee target.
  */
 function HoursVsTargetChart({ rows }: { rows: MonthRow[] }) {
+  const LIMIT = 12;
   const sorted = React.useMemo(
-    () => [...rows].sort((a, b) => b.totalHours - a.totalHours).slice(0, 12),
+    () => [...rows].sort((a, b) => b.totalHours - a.totalHours).slice(0, LIMIT),
     [rows]
   );
+  const hidden = Math.max(0, rows.length - sorted.length);
   const max = Math.max(
     1,
     ...sorted.map((r) => Math.max(r.totalHours, r.expectedHours))
@@ -513,7 +666,7 @@ function HoursVsTargetChart({ rows }: { rows: MonthRow[] }) {
           Hours vs target
         </h3>
         <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Top {sorted.length}
+          {hidden > 0 ? `Top ${sorted.length} of ${rows.length}` : `${sorted.length} ${sorted.length === 1 ? "person" : "people"}`}
         </span>
       </div>
       <div className="flex flex-col gap-3">
@@ -560,6 +713,11 @@ function HoursVsTargetChart({ rows }: { rows: MonthRow[] }) {
           );
         })}
       </div>
+      {hidden > 0 && (
+        <p className="mt-3 text-[10px] text-muted-foreground">
+          + {hidden} more — see full table below
+        </p>
+      )}
     </Card>
   );
 }
@@ -720,10 +878,12 @@ function LegendSwatch({
 }
 
 function YtdHoursChart({ rows }: { rows: YearRow[] }) {
+  const LIMIT = 12;
   const sorted = React.useMemo(
-    () => [...rows].sort((a, b) => b.totalHours - a.totalHours).slice(0, 12),
+    () => [...rows].sort((a, b) => b.totalHours - a.totalHours).slice(0, LIMIT),
     [rows]
   );
+  const hidden = Math.max(0, rows.length - sorted.length);
   const max = Math.max(1, ...sorted.map((r) => r.totalHours));
   return (
     <Card className="p-5">
@@ -732,7 +892,7 @@ function YtdHoursChart({ rows }: { rows: YearRow[] }) {
           Total hours (YTD)
         </h3>
         <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Top {sorted.length}
+          {hidden > 0 ? `Top ${sorted.length} of ${rows.length}` : `${sorted.length} ${sorted.length === 1 ? "person" : "people"}`}
         </span>
       </div>
       <div className="flex flex-col gap-3">
@@ -758,6 +918,11 @@ function YtdHoursChart({ rows }: { rows: YearRow[] }) {
           </div>
         ))}
       </div>
+      {hidden > 0 && (
+        <p className="mt-3 text-[10px] text-muted-foreground">
+          + {hidden} more — see full table below
+        </p>
+      )}
     </Card>
   );
 }
