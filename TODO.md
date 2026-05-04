@@ -1,7 +1,7 @@
 [x] Show password UX
 [x] Calendar page view broken on mobile
 [x] Highlight the holiday on the calendar, also show it on the Today page as well
-[ ] If possible and makes sense, we can add more stats in the report page like graphs etc
+[x] If possible and makes sense, we can add more stats in the report page like graphs etc
 
 
 [x] Are we taking care of minutes as well? I can see total hours as whole number even one I add some odd minutes as well
