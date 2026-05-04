@@ -128,10 +128,16 @@ export function TimePicker({
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState(() => labelFor(value));
   const [invalid, setInvalid] = React.useState(false);
+  const [placement, setPlacement] = React.useState<"below" | "above">("below");
   const rootRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const hourColRef = React.useRef<HTMLDivElement>(null);
   const minuteColRef = React.useRef<HTMLDivElement>(null);
+
+  // Approx popover height — keep in sync with the JSX below (label + 12rem
+  // scroll columns + footer + padding). Used only to decide flip direction;
+  // exact pixel match isn't required.
+  const POPOVER_H = 280;
 
   const draft = React.useMemo(() => deriveDraft(value), [value]);
 
@@ -163,6 +169,29 @@ export function TimePicker({
       document.removeEventListener("keydown", onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Pick a placement (above/below) based on available viewport room.
+  // Recomputed on open and whenever the window resizes while open.
+  React.useEffect(() => {
+    if (!open) return;
+    function measure() {
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // Prefer below; flip up only if it doesn't fit AND there's more room above.
+      setPlacement(
+        spaceBelow < POPOVER_H && spaceAbove > spaceBelow ? "above" : "below"
+      );
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
   }, [open]);
 
   // Scroll the active hour/minute into view when the popover opens.
@@ -268,7 +297,10 @@ export function TimePicker({
         <div
           role="dialog"
           aria-label="Pick a time"
-          className="absolute z-50 mt-1 w-full min-w-[260px] rounded-[8px] border border-border bg-popover p-2 shadow-lg"
+          className={cn(
+            "absolute z-50 w-full min-w-[260px] rounded-[8px] border border-border bg-popover p-2 shadow-lg",
+            placement === "below" ? "top-full mt-1" : "bottom-full mb-1"
+          )}
         >
           <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
             <Column
