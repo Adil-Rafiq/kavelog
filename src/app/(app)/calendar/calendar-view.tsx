@@ -116,14 +116,14 @@ export function CalendarView({
   return (
     <div className="flex flex-col gap-6">
       {/* Header & nav */}
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl text-foreground">{monthName}</h1>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl text-foreground sm:text-2xl">{monthName}</h1>
+          <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:text-xs">
             Attendance calendar
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 self-end sm:self-auto">
           <Button
             variant="outline"
             size="icon"
@@ -213,7 +213,7 @@ export function CalendarView({
         </div>
         <div className="grid grid-cols-7 gap-1">
           {cells.map((d, idx) => {
-            if (!d) return <div key={idx} className="h-20 md:h-24" />;
+            if (!d) return <div key={idx} className="h-16 sm:h-20 md:h-24" />;
             const key = toDateKey(d);
             const rec = isLoading ? undefined : recordMap.get(key);
             const holiday = isLoading ? undefined : holidayMap.get(key);
@@ -243,7 +243,7 @@ export function CalendarView({
                 onClick={() => !isLoading && setSelected(key)}
                 disabled={isLoading}
                 className={cn(
-                  "group relative flex h-20 flex-col items-start justify-between rounded-[8px] border p-2 text-left transition-colors hover:bg-secondary/40 md:h-24",
+                  "group relative flex h-16 min-w-0 flex-col items-start justify-between overflow-hidden rounded-[8px] border p-1.5 text-left transition-colors hover:bg-secondary/40 sm:h-20 sm:p-2 md:h-24",
                   isToday
                     ? "border-primary/60 bg-primary/5"
                     : "border-border/60",
@@ -255,10 +255,10 @@ export function CalendarView({
                   isLoading && "cursor-default"
                 )}
               >
-                <div className="flex w-full items-center justify-between">
+                <div className="flex w-full items-center justify-between gap-1">
                   <span
                     className={cn(
-                      "font-mono text-sm tabular",
+                      "font-mono text-xs tabular sm:text-sm",
                       isToday ? "text-primary" : "text-foreground"
                     )}
                   >
@@ -266,19 +266,32 @@ export function CalendarView({
                   </span>
                   {status && <StatusDot status={status} />}
                 </div>
-                <div className="flex w-full flex-col gap-0.5">
+                <div className="flex w-full min-w-0 flex-col gap-0.5">
                   {isLoading ? (
                     <CellSkeleton />
                   ) : (
                     <>
+                      {/* Mobile: compact summary (worked hours + OT badge only). */}
+                      {rec?.clockIn && rec?.clockOut && (
+                        <span className="truncate font-mono text-[10px] text-foreground/80 tabular sm:hidden">
+                          {formatHours(
+                            computeWorkedHours(
+                              new Date(rec.clockIn),
+                              new Date(rec.clockOut)
+                            )
+                          )}
+                          h
+                        </span>
+                      )}
+                      {/* Desktop: full clock-in/out range + worked hours. */}
                       {rec?.clockIn && (
-                        <span className="font-mono text-[10px] text-muted-foreground tabular">
+                        <span className="hidden truncate font-mono text-[10px] text-muted-foreground tabular sm:inline">
                           {formatTimeShort(rec.clockIn)}
                           {rec.clockOut && ` → ${formatTimeShort(rec.clockOut)}`}
                         </span>
                       )}
                       {rec?.clockIn && rec?.clockOut && (
-                        <span className="font-mono text-[10px] text-foreground/80 tabular">
+                        <span className="hidden font-mono text-[10px] text-foreground/80 tabular sm:inline">
                           {formatHours(
                             computeWorkedHours(
                               new Date(rec.clockIn),
@@ -289,7 +302,7 @@ export function CalendarView({
                         </span>
                       )}
                       {rec?.overtimeChunks ? (
-                        <span className="text-[10px] text-warning tabular">
+                        <span className="truncate text-[10px] text-warning tabular">
                           +{rec.overtimeChunks} OT
                         </span>
                       ) : null}
