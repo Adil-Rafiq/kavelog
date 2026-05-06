@@ -1,10 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toaster";
 
 interface UserRow {
@@ -26,12 +29,15 @@ const TABS = [
 
 export function UsersAdmin({
   departments,
+  currentUserId,
 }: {
   departments: { id: string; name: string }[];
+  currentUserId: string;
 }) {
   const [tab, setTab] = React.useState<(typeof TABS)[number]["key"]>("pending");
   const [items, setItems] = React.useState<UserRow[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<UserRow | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -56,6 +62,26 @@ export function UsersAdmin({
       return;
     }
     toast({ kind: "success", title: "Updated" });
+    load();
+  }
+
+  async function handleDelete(id: string) {
+    const res = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      toast({
+        kind: "error",
+        title: "Delete failed",
+        description: data?.error ?? "Please try again.",
+      });
+      return;
+    }
+    toast({ kind: "success", title: "User deleted" });
+    setDeleteTarget(null);
     load();
   }
 
@@ -172,6 +198,15 @@ export function UsersAdmin({
                             Re-pend
                           </Button>
                         )}
+                        {u.id !== currentUserId && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setDeleteTarget(u)}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -181,6 +216,99 @@ export function UsersAdmin({
           </table>
         </div>
       </Card>
+
+      {deleteTarget && (
+        <DeleteUserDialog
+          user={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => handleDelete(deleteTarget.id)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DeleteUserDialog({
+  user,
+  onClose,
+  onConfirm,
+}: {
+  user: UserRow;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [confirmText, setConfirmText] = React.useState("");
+  const [pending, setPending] = React.useState(false);
+  const matches = confirmText.trim().toLowerCase() === user.email.toLowerCase();
+
+  async function submit() {
+    if (!matches || pending) return;
+    setPending(true);
+    try {
+      await onConfirm();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 p-0 backdrop-blur-sm md:items-center md:p-6"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-t-[16px] border border-border bg-card text-card-foreground md:rounded-[16px] animate-reveal grain"
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-destructive">
+              Delete user
+            </div>
+            <div className="text-base text-foreground">{user.name}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex flex-col gap-4 p-5">
+          <p className="text-sm text-muted-foreground">
+            This permanently removes{" "}
+            <span className="text-foreground">{user.email}</span> and all their
+            attendance records, notifications, support tickets, and password
+            reset tokens. This cannot be undone.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="confirm-email">
+              Type the email to confirm
+            </Label>
+            <Input
+              id="confirm-email"
+              autoFocus
+              autoComplete="off"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={user.email}
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+          <Button variant="ghost" onClick={onClose} disabled={pending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={submit}
+            disabled={!matches || pending}
+          >
+            {pending ? "Deleting…" : "Delete user"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

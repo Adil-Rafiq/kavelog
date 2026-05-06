@@ -24,7 +24,7 @@ export default async function AdminUsersPage() {
         </span>
         <h1 className="text-2xl text-foreground">Users</h1>
       </header>
-      <UsersAdmin departments={depts} />
+      <UsersAdmin departments={depts} currentUserId={session.user.id} />
     </div>
   );
 }

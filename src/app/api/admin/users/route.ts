@@ -91,3 +91,42 @@ export async function PATCH(req: Request) {
 
   return NextResponse.json({ ok: true, item: updated });
 }
+
+const deleteSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export async function DELETE(req: Request) {
+  const session = await auth();
+  if (session?.user?.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const body = await req.json().catch(() => null);
+  const parsed = deleteSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
+  const { id } = parsed.data;
+
+  if (id === session.user.id) {
+    return NextResponse.json(
+      { error: "You cannot delete your own account." },
+      { status: 400 }
+    );
+  }
+
+  const [target] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
+  if (!target) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // FK cascades drop attendance records, notifications, support tickets +
+  // messages, and password-reset tokens for this user automatically.
+  await db.delete(users).where(eq(users.id, id));
+
+  return NextResponse.json({ ok: true });
+}
