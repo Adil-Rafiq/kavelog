@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { Analytics } from "@vercel/analytics/next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "KaveLog — Attendance",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
