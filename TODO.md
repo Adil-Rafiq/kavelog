@@ -1,3 +1,5 @@
+[ ] Fix forget password
+
 [x] Show password UX
 [x] Calendar page view broken on mobile
 [x] Highlight the holiday on the calendar, also show it on the Today page as well
