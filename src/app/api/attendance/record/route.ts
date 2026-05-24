@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid input", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -52,7 +52,10 @@ export async function POST(req: Request) {
 
   const overtimeChunks =
     parsed.data.status === "present"
-      ? recomputeOvertime({ clockIn: safeClockIn, clockOut: safeClockOut }, ctx.shift)
+      ? recomputeOvertime(
+          { clockIn: safeClockIn, clockOut: safeClockOut },
+          ctx.shift,
+        )
       : 0;
 
   const [existing] = await db
@@ -61,8 +64,8 @@ export async function POST(req: Request) {
     .where(
       and(
         eq(attendanceRecords.userId, targetUserId),
-        eq(attendanceRecords.date, parsed.data.date)
-      )
+        eq(attendanceRecords.date, parsed.data.date),
+      ),
     )
     .limit(1);
 
@@ -126,7 +129,10 @@ export async function DELETE(req: Request) {
   const date = url.searchParams.get("date");
   const userId = url.searchParams.get("userId");
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: "Missing or invalid date" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing or invalid date" },
+      { status: 400 },
+    );
   }
 
   const targetUserId = userId ?? session.user.id;
@@ -138,12 +144,17 @@ export async function DELETE(req: Request) {
     .select()
     .from(attendanceRecords)
     .where(
-      and(eq(attendanceRecords.userId, targetUserId), eq(attendanceRecords.date, date))
+      and(
+        eq(attendanceRecords.userId, targetUserId),
+        eq(attendanceRecords.date, date),
+      ),
     )
     .limit(1);
 
   if (existing) {
-    await db.delete(attendanceRecords).where(eq(attendanceRecords.id, existing.id));
+    await db
+      .delete(attendanceRecords)
+      .where(eq(attendanceRecords.id, existing.id));
 
     if (session.user.role === "admin" && targetUserId !== session.user.id) {
       const [target] = await db

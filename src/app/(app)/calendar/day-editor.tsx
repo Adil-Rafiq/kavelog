@@ -164,26 +164,38 @@ export function DayEditor({
           )}
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
-          <Button variant="destructive" onClick={async () => {
-            if (!record) return;
-            // confirm destructive undo
-            // eslint-disable-next-line no-restricted-globals
-            if (!confirm('Undo this day (remove the attendance record)?')) return;
-            setPending(true);
-            const params = new URLSearchParams({ date: dateKey });
-            if (targetUserId) params.set('userId', targetUserId);
-            const res = await fetch(`/api/attendance/record?${params.toString()}`, {
-              method: 'DELETE',
-            });
-            const data = await res.json().catch(() => ({}));
-            setPending(false);
-            if (!res.ok) {
-              toast({ kind: 'error', title: 'Could not undo', description: data?.error ?? 'Please try again.' });
-              return;
-            }
-            toast({ kind: 'success', title: 'Undone' });
-            onSaved();
-          }} disabled={pending}>
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              if (!record) return;
+              // confirm destructive undo
+              // eslint-disable-next-line no-restricted-globals
+              if (!confirm("Undo this day (remove the attendance record)?"))
+                return;
+              setPending(true);
+              const params = new URLSearchParams({ date: dateKey });
+              if (targetUserId) params.set("userId", targetUserId);
+              const res = await fetch(
+                `/api/attendance/record?${params.toString()}`,
+                {
+                  method: "DELETE",
+                },
+              );
+              const data = await res.json().catch(() => ({}));
+              setPending(false);
+              if (!res.ok) {
+                toast({
+                  kind: "error",
+                  title: "Could not undo",
+                  description: data?.error ?? "Please try again.",
+                });
+                return;
+              }
+              toast({ kind: "success", title: "Undone" });
+              onSaved();
+            }}
+            disabled={pending}
+          >
             {pending ? "Working…" : "Undo"}
           </Button>
           <Button variant="ghost" onClick={onClose}>
