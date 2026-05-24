@@ -164,7 +164,7 @@ export async function DELETE(req: Request) {
         .limit(1);
       await notify({
         userId: targetUserId,
-        type: "record_deleted",
+        type: "record_edited",
         title: "Your attendance was changed",
         message: `An admin removed your attendance record for ${date}.`,
         link: "/calendar",
