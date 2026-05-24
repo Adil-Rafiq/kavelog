@@ -95,7 +95,7 @@ export function CalendarView({
 
   const monthName = new Date(displayedYear, displayedMonth0).toLocaleDateString(
     "en-US",
-    { month: "long", year: "numeric" }
+    { month: "long", year: "numeric" },
   );
 
   const prevMonth = new Date(displayedYear, displayedMonth0 - 1);
@@ -118,7 +118,9 @@ export function CalendarView({
       {/* Header & nav */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="truncate text-xl text-foreground sm:text-2xl">{monthName}</h1>
+          <h1 className="truncate text-xl text-foreground sm:text-2xl">
+            {monthName}
+          </h1>
           <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:text-xs">
             Attendance calendar
           </p>
@@ -201,128 +203,135 @@ export function CalendarView({
 
       {/* Grid */}
       <Card className="p-3 md:p-4">
-        <div className="grid grid-cols-7 gap-1 pb-2">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div
-              key={d}
-              className="px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
-            >
-              {d}
+        <div className="overflow-x-auto">
+          <div className="min-w-[640px]">
+            <div className="grid grid-cols-7 gap-1 pb-2">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                <div
+                  key={d}
+                  className="px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
+                >
+                  {d}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((d, idx) => {
-            if (!d) return <div key={idx} className="h-16 sm:h-20 md:h-24" />;
-            const key = toDateKey(d);
-            const rec = isLoading ? undefined : recordMap.get(key);
-            const holiday = isLoading ? undefined : holidayMap.get(key);
-            const isToday = key === todayKey;
-            const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-            const status:
-              | "present"
-              | "absent"
-              | "leave"
-              | "weekend"
-              | "holiday"
-              | null = rec?.status === "present"
-              ? "present"
-              : rec?.status === "absent"
-                ? "absent"
-                : rec?.status === "paid_leave"
-                  ? "leave"
-                  : holiday
-                    ? "holiday"
-                    : isWeekend
-                      ? "weekend"
-                      : null;
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((d, idx) => {
+                if (!d)
+                  return <div key={idx} className="h-16 sm:h-20 md:h-24" />;
+                const key = toDateKey(d);
+                const rec = isLoading ? undefined : recordMap.get(key);
+                const holiday = isLoading ? undefined : holidayMap.get(key);
+                const isToday = key === todayKey;
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                const status:
+                  | "present"
+                  | "absent"
+                  | "leave"
+                  | "weekend"
+                  | "holiday"
+                  | null =
+                  rec?.status === "present"
+                    ? "present"
+                    : rec?.status === "absent"
+                      ? "absent"
+                      : rec?.status === "paid_leave"
+                        ? "leave"
+                        : holiday
+                          ? "holiday"
+                          : isWeekend
+                            ? "weekend"
+                            : null;
 
-            return (
-              <button
-                key={idx}
-                onClick={() => !isLoading && setSelected(key)}
-                disabled={isLoading}
-                className={cn(
-                  "group relative flex h-16 min-w-0 flex-col items-start justify-between overflow-hidden rounded-[8px] border p-1.5 text-left transition-colors hover:bg-secondary/40 sm:h-20 sm:p-2 md:h-24",
-                  isToday
-                    ? "border-primary/60 bg-primary/5"
-                    : holiday
-                      ? "border-info/50 ring-1 ring-info/30"
-                      : "border-border/60",
-                  // rec status bg wins; otherwise holiday tint, otherwise nothing
-                  rec?.status === "present" && "bg-success/5",
-                  rec?.status === "absent" && "bg-destructive/5",
-                  rec?.status === "paid_leave" && "bg-warning/5",
-                  holiday && !rec && "bg-info/10",
-                  status === "weekend" && "opacity-70",
-                  isLoading && "cursor-default"
-                )}
-              >
-                <div className="flex w-full items-center justify-between gap-1">
-                  <span
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => !isLoading && setSelected(key)}
+                    disabled={isLoading}
                     className={cn(
-                      "font-mono text-xs tabular sm:text-sm",
-                      isToday ? "text-primary" : "text-foreground"
+                      "group relative flex h-16 min-w-0 flex-col items-start justify-between overflow-hidden rounded-[8px] border p-1.5 text-left transition-colors hover:bg-secondary/40 sm:h-20 sm:p-2 md:h-24",
+                      isToday
+                        ? "border-primary/60 bg-primary/5"
+                        : holiday
+                          ? "border-info/50 ring-1 ring-info/30"
+                          : "border-border/60",
+                      // rec status bg wins; otherwise holiday tint, otherwise nothing
+                      rec?.status === "present" && "bg-success/5",
+                      rec?.status === "absent" && "bg-destructive/5",
+                      rec?.status === "paid_leave" && "bg-warning/5",
+                      holiday && !rec && "bg-info/10",
+                      status === "weekend" && "opacity-70",
+                      isLoading && "cursor-default",
                     )}
                   >
-                    {String(d.getDate()).padStart(2, "0")}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    {holiday && rec && <StatusDot status="holiday" />}
-                    {status && <StatusDot status={status} />}
-                  </span>
-                </div>
-                <div className="flex w-full min-w-0 flex-col gap-0.5">
-                  {isLoading ? (
-                    <CellSkeleton />
-                  ) : (
-                    <>
-                      {/* Mobile: compact summary (worked hours + OT badge only). */}
-                      {rec?.clockIn && rec?.clockOut && (
-                        <span className="truncate font-mono text-[10px] text-foreground/80 tabular sm:hidden">
-                          {formatHours(
-                            computeWorkedHours(
-                              new Date(rec.clockIn),
-                              new Date(rec.clockOut)
-                            )
+                    <div className="flex w-full items-center justify-between gap-1">
+                      <span
+                        className={cn(
+                          "font-mono text-xs tabular sm:text-sm",
+                          isToday ? "text-primary" : "text-foreground",
+                        )}
+                      >
+                        {String(d.getDate()).padStart(2, "0")}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        {holiday && rec && <StatusDot status="holiday" />}
+                        {status && <StatusDot status={status} />}
+                      </span>
+                    </div>
+                    <div className="flex w-full min-w-0 flex-col gap-0.5">
+                      {isLoading ? (
+                        <CellSkeleton />
+                      ) : (
+                        <>
+                          {/* Mobile: compact summary (worked hours + OT badge only). */}
+                          {rec?.clockIn && rec?.clockOut && (
+                            <span className="truncate font-mono text-[10px] text-foreground/80 tabular sm:hidden">
+                              {formatHours(
+                                computeWorkedHours(
+                                  new Date(rec.clockIn),
+                                  new Date(rec.clockOut),
+                                ),
+                              )}
+                              h
+                            </span>
                           )}
-                          h
-                        </span>
-                      )}
-                      {/* Desktop: full clock-in/out range + worked hours. */}
-                      {rec?.clockIn && (
-                        <span className="hidden truncate font-mono text-[10px] text-muted-foreground tabular sm:inline">
-                          {formatTimeShort(rec.clockIn)}
-                          {rec.clockOut && ` → ${formatTimeShort(rec.clockOut)}`}
-                        </span>
-                      )}
-                      {rec?.clockIn && rec?.clockOut && (
-                        <span className="hidden font-mono text-[10px] text-foreground/80 tabular sm:inline">
-                          {formatHours(
-                            computeWorkedHours(
-                              new Date(rec.clockIn),
-                              new Date(rec.clockOut)
-                            )
+                          {/* Desktop: full clock-in/out range + worked hours. */}
+                          {rec?.clockIn && (
+                            <span className="hidden truncate font-mono text-[10px] text-muted-foreground tabular sm:inline">
+                              {formatTimeShort(rec.clockIn)}
+                              {rec.clockOut &&
+                                ` → ${formatTimeShort(rec.clockOut)}`}
+                            </span>
                           )}
-                          h
-                        </span>
+                          {rec?.clockIn && rec?.clockOut && (
+                            <span className="hidden font-mono text-[10px] text-foreground/80 tabular sm:inline">
+                              {formatHours(
+                                computeWorkedHours(
+                                  new Date(rec.clockIn),
+                                  new Date(rec.clockOut),
+                                ),
+                              )}
+                              h
+                            </span>
+                          )}
+                          {rec?.overtimeChunks ? (
+                            <span className="truncate text-[10px] text-warning tabular">
+                              +{rec.overtimeChunks} OT
+                            </span>
+                          ) : null}
+                          {holiday && (
+                            <span className="truncate text-[10px] font-medium text-info">
+                              {holiday}
+                            </span>
+                          )}
+                        </>
                       )}
-                      {rec?.overtimeChunks ? (
-                        <span className="truncate text-[10px] text-warning tabular">
-                          +{rec.overtimeChunks} OT
-                        </span>
-                      ) : null}
-                      {holiday && (
-                        <span className="truncate text-[10px] font-medium text-info">
-                          {holiday}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </Card>
 
