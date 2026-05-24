@@ -36,18 +36,27 @@ export function DayEditor({
   isAdmin: boolean;
   targetUserId: string;
 }) {
-  const [status, setStatus] = React.useState<Status>(record?.status ?? "present");
-  const [clockIn, setClockIn] = React.useState(toLocalTime(record?.clockIn ?? null));
-  const [clockOut, setClockOut] = React.useState(toLocalTime(record?.clockOut ?? null));
+  const [status, setStatus] = React.useState<Status>(
+    record?.status ?? "present",
+  );
+  const [clockIn, setClockIn] = React.useState(
+    toLocalTime(record?.clockIn ?? null),
+  );
+  const [clockOut, setClockOut] = React.useState(
+    toLocalTime(record?.clockOut ?? null),
+  );
   const [notes, setNotes] = React.useState(record?.notes ?? "");
   const [pending, setPending] = React.useState(false);
 
-  const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString(
+    "en-US",
+    {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    },
+  );
 
   async function save() {
     setPending(true);
@@ -59,7 +68,9 @@ export function DayEditor({
     };
     if (status === "present") {
       payload.clockIn = clockIn ? localToISO(dateKey, clockIn) : null;
-      payload.clockOut = clockOut ? localToISO(dateKey, clockOut, clockIn) : null;
+      payload.clockOut = clockOut
+        ? localToISO(dateKey, clockOut, clockIn)
+        : null;
     } else {
       payload.clockIn = null;
       payload.clockOut = null;
@@ -108,9 +119,7 @@ export function DayEditor({
           </button>
         </div>
         <div className="flex flex-col gap-5 p-5">
-          {holiday && (
-            <Badge variant="holiday">Holiday — {holiday}</Badge>
-          )}
+          {holiday && <Badge variant="holiday">Holiday — {holiday}</Badge>}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="status">Status</Label>
@@ -126,7 +135,7 @@ export function DayEditor({
           </div>
 
           {status === "present" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="in">Clock in</Label>
                 <TimePicker id="in" value={clockIn} onChange={setClockIn} />
