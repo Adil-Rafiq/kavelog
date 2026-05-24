@@ -115,3 +115,52 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ok: true, record });
 }
+
+export async function DELETE(req: Request) {
+  const session = await auth();
+  if (!session?.user || session.user.status !== "active") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const url = new URL(req.url);
+  const date = url.searchParams.get("date");
+  const userId = url.searchParams.get("userId");
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return NextResponse.json({ error: "Missing or invalid date" }, { status: 400 });
+  }
+
+  const targetUserId = userId ?? session.user.id;
+  if (targetUserId !== session.user.id && session.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const [existing] = await db
+    .select()
+    .from(attendanceRecords)
+    .where(
+      and(eq(attendanceRecords.userId, targetUserId), eq(attendanceRecords.date, date))
+    )
+    .limit(1);
+
+  if (existing) {
+    await db.delete(attendanceRecords).where(eq(attendanceRecords.id, existing.id));
+
+    if (session.user.role === "admin" && targetUserId !== session.user.id) {
+      const [target] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, targetUserId))
+        .limit(1);
+      await notify({
+        userId: targetUserId,
+        type: "record_deleted",
+        title: "Your attendance was changed",
+        message: `An admin removed your attendance record for ${date}.`,
+        link: "/calendar",
+      });
+      void target;
+    }
+  }
+
+  return NextResponse.json({ ok: true });
+}
