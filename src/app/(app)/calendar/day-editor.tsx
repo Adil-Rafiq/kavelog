@@ -96,12 +96,12 @@ export function DayEditor({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 p-0 backdrop-blur-sm md:items-center md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 md:p-6 backdrop-blur-sm overflow-auto"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-t-[16px] border border-border bg-card text-card-foreground md:rounded-[16px] animate-reveal grain"
+        className="w-full max-w-lg rounded-[16px] border border-border bg-card text-card-foreground animate-reveal grain"
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
