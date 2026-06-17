@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0A0D12" />
+    <title>Offline · KaveLog</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #0a0d12;
+        color: #e8eaed;
+        font-family: Geist, system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 22rem;
+        text-align: center;
+      }
+      .mark {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 24px;
+      }
+      h1 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 1.75rem;
+        letter-spacing: -0.01em;
+        margin: 0 0 0.5rem;
+      }
+      p {
+        margin: 0 0 1.5rem;
+        font-size: 0.9rem;
+        line-height: 1.55;
+        color: #8c95a5;
+      }
+      button {
+        appearance: none;
+        border: none;
+        cursor: pointer;
+        background: #d7ff3a;
+        color: #0e1217;
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.7rem 1.5rem;
+        border-radius: 10px;
+        transition: transform 0.15s ease;
+      }
+      button:active {
+        transform: scale(0.975);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg
+        class="mark"
+        viewBox="0 0 512 512"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        <rect width="512" height="512" rx="112" fill="#d7ff3a" />
+        <g
+          stroke="#0e1217"
+          stroke-width="58"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"
+        >
+          <path d="M178 120 V392" />
+          <path d="M178 256 L350 120" />
+          <path d="M178 256 L350 392" />
+        </g>
+      </svg>
+      <h1>You&rsquo;re offline</h1>
+      <p>
+        KaveLog needs a connection to load this page. Anything you&rsquo;ve
+        already recorded is safe on the server — reconnect to continue.
+      </p>
+      <button onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>
