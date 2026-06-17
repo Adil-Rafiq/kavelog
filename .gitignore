@@ -41,3 +41,6 @@ next-env.d.ts
 
 # drizzle
 /drizzle/meta
+
+# playwright (local verification artifacts)
+/.playwright-mcp/

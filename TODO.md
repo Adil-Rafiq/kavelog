@@ -12,3 +12,4 @@
 [x] Forget password mechanism
 [x] Tickets submission not working. Getting 500 error.
 [x] Add Vercel analytics
+[x] Make app installable (PWA): manifest, icons, theme-color, offline page, service worker
