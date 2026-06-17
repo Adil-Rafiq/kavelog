@@ -37,5 +37,10 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip Next internals, the favicon, and all public PWA assets (manifest,
+  // icons, service worker, offline page) so they're reachable without auth —
+  // the browser fetches these before login and the SW must serve as JS.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon|icons/|manifest.webmanifest|sw.js|offline.html).*)",
+  ],
 };
