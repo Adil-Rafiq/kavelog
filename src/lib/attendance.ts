@@ -101,6 +101,10 @@ export interface MonthSummary {
   totalHours: number;
   overtimeChunks: number;
   expectedHours: number;
+  /** Hours worked on working days that have already fully elapsed (today excluded). */
+  hoursWorkedToDate: number;
+  /** Target hours for working days that have already fully elapsed (today excluded). */
+  expectedHoursToDate: number;
   weekendHoursWorked: number;
   paidLeavesUsedThisMonth: number;
 }
@@ -127,11 +131,32 @@ export async function summarizeMonth(
   }).length;
   const holidayKeys = new Set(hols.map((h) => h.date));
 
+  // "To date" figures power the month-pace indicator: how the user is tracking
+  // against the target for working days that have *already elapsed*. Today is
+  // in progress, so it's excluded from both the worked and expected sides
+  // (comparing a partial day would distort the signal). For a fully past month
+  // this equals the whole month; for a future month it's zero.
+  const todayKey = toDateKey(new Date());
+  const lastDay = end.getDate();
+  let elapsedWeekdays = 0;
+  for (let day = 1; day <= lastDay; day++) {
+    const d = new Date(year, month0, day);
+    if (toDateKey(d) >= todayKey) break;
+    if (!isWeekend(d)) elapsedWeekdays++;
+  }
+  const holidayWeekdaysToDate = hols.filter((h) => {
+    if (h.date >= todayKey) return false;
+    const d = new Date(h.date + "T00:00:00");
+    return !isWeekend(d);
+  }).length;
+
   let daysPresent = 0;
   let daysAbsent = 0;
   let daysPaidLeave = 0;
   let paidLeaveWeekdays = 0;
+  let paidLeaveWeekdaysToDate = 0;
   let totalHours = 0;
+  let hoursWorkedToDate = 0;
   let overtimeChunks = 0;
   let weekendHoursWorked = 0;
 
@@ -142,6 +167,7 @@ export async function summarizeMonth(
       daysPresent++;
       const hrs = computeWorkedHours(r.clockIn, r.clockOut);
       totalHours += hrs;
+      if (r.date < todayKey) hoursWorkedToDate += hrs;
       if (wknd) weekendHoursWorked += hrs;
       overtimeChunks += r.overtimeChunks ?? 0;
     } else if (r.status === "absent") {
@@ -151,9 +177,18 @@ export async function summarizeMonth(
       // A weekday paid-leave day reduces the target by 8h (hours-neutral),
       // mirroring holidays. Skip weekends (not in the target) and days already
       // counted as holidays so the target isn't reduced twice for one date.
-      if (!wknd && !holidayKeys.has(r.date)) paidLeaveWeekdays++;
+      if (!wknd && !holidayKeys.has(r.date)) {
+        paidLeaveWeekdays++;
+        if (r.date < todayKey) paidLeaveWeekdaysToDate++;
+      }
     }
   }
+
+  const expectedHoursToDate =
+    Math.max(
+      0,
+      elapsedWeekdays - holidayWeekdaysToDate - paidLeaveWeekdaysToDate
+    ) * POLICY.WORKING_HOURS_PER_DAY;
 
   return {
     year,
@@ -169,6 +204,8 @@ export async function summarizeMonth(
       holidayWeekdays,
       paidLeaveWeekdays
     ),
+    hoursWorkedToDate,
+    expectedHoursToDate,
     weekendHoursWorked,
     paidLeavesUsedThisMonth: daysPaidLeave,
   };
