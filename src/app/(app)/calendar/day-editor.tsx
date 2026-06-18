@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "@/components/ui/toaster";
+import { shiftDefaultTimes, shiftLabel, type Shift } from "@/lib/policy";
 
 type Status = "present" | "absent" | "paid_leave";
 
@@ -23,6 +24,7 @@ export function DayEditor({
   dateKey,
   record,
   holiday,
+  shift,
   onClose,
   onSaved,
   isAdmin,
@@ -31,6 +33,7 @@ export function DayEditor({
   dateKey: string;
   record: RecordInput | null;
   holiday: string | null;
+  shift: Shift;
   onClose: () => void;
   onSaved: () => void;
   isAdmin: boolean;
@@ -47,6 +50,19 @@ export function DayEditor({
   );
   const [notes, setNotes] = React.useState(record?.notes ?? "");
   const [pending, setPending] = React.useState(false);
+
+  const defaults = React.useMemo(() => shiftDefaultTimes(shift), [shift]);
+
+  // When the user fills one time and leaves the other blank, auto-fill the
+  // empty side with the shift default. Never overwrites a value the user set.
+  function handleClockInChange(value: string) {
+    setClockIn(value);
+    if (value && !clockOut) setClockOut(defaults.clockOut);
+  }
+  function handleClockOutChange(value: string) {
+    setClockOut(value);
+    if (value && !clockIn) setClockIn(defaults.clockIn);
+  }
 
   const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString(
     "en-US",
@@ -135,15 +151,29 @@ export function DayEditor({
           </div>
 
           {status === "present" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="in">Clock in</Label>
-                <TimePicker id="in" value={clockIn} onChange={setClockIn} />
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="in">Clock in</Label>
+                  <TimePicker
+                    id="in"
+                    value={clockIn}
+                    onChange={handleClockInChange}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="out">Clock out</Label>
+                  <TimePicker
+                    id="out"
+                    value={clockOut}
+                    onChange={handleClockOutChange}
+                  />
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="out">Clock out</Label>
-                <TimePicker id="out" value={clockOut} onChange={setClockOut} />
-              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Fill one time and the other defaults to your shift (
+                {shiftLabel(shift)}). Edit either freely.
+              </p>
             </div>
           )}
 
