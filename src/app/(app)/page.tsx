@@ -116,7 +116,12 @@ export default async function TodayPage() {
               label="Hours worked"
               value={formatHours(month.totalHours)}
               unit={`/ ${month.expectedHours.toFixed(0)} h`}
-              hint={`Target adjusted for holidays`}
+              hint={
+                <PaceHint
+                  worked={month.hoursWorkedToDate}
+                  expected={month.expectedHoursToDate}
+                />
+              }
             />
           </Card>
           <Card className="p-5">
@@ -178,6 +183,33 @@ export default async function TodayPage() {
         </Card>
       </section>
     </div>
+  );
+}
+
+/**
+ * Pace indicator — are you ahead of or behind the target for the working days
+ * that have already elapsed this month? Both inputs exclude the in-progress
+ * day (see summarizeMonth). A gentle nudge, not a verdict: "behind" is amber,
+ * not red.
+ */
+function PaceHint({ worked, expected }: { worked: number; expected: number }) {
+  if (expected <= 0 && worked <= 0) {
+    return (
+      <span className="text-muted-foreground">
+        Pace starts after your first workday
+      </span>
+    );
+  }
+  const delta = worked - expected;
+  if (Math.abs(delta) < 0.5) {
+    return <span className="text-success">On pace</span>;
+  }
+  const ahead = delta > 0;
+  return (
+    <span className={ahead ? "text-success" : "text-warning"}>
+      {ahead ? "▲" : "▼"} {formatHours(Math.abs(delta))}{" "}
+      {ahead ? "ahead of pace" : "behind pace"}
+    </span>
   );
 }
 
