@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notification-bell";
+import { InstallButton } from "@/components/install-button";
 
 interface SessionUser {
   id: string;
@@ -162,6 +163,7 @@ export function AppShell({
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <InstallButton />
             <NotificationBell />
             <ThemeToggle />
           </div>
