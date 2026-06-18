@@ -192,17 +192,25 @@ export function weekdaysInMonth(year: number, month0: number): number {
 }
 
 /**
- * Compute the expected working hours for a month, adjusted for holidays.
- * Option B: each holiday reduces target by 8 hours.
+ * Compute the expected working hours for a month, adjusted for holidays and
+ * paid leave.
  *
- * Holidays passed in must already be filtered to the given month and weekdays.
+ * Option B: each weekday holiday reduces the target by 8 hours. Paid-leave
+ * weekdays are treated the same way, so taking approved leave doesn't open an
+ * hours deficit — the day is "excused", not unpaid.
+ *
+ * Both counts must already be filtered to weekdays in the given month, and must
+ * not overlap (a day counted as a holiday must not also be counted as paid
+ * leave) or the target would be reduced twice for one date.
  */
 export function expectedMonthlyHours(
   year: number,
   month0: number,
-  holidayWeekdaysInMonth: number
+  holidayWeekdaysInMonth: number,
+  paidLeaveWeekdaysInMonth = 0
 ): number {
-  const workdays = weekdaysInMonth(year, month0) - holidayWeekdaysInMonth;
+  const excused = holidayWeekdaysInMonth + paidLeaveWeekdaysInMonth;
+  const workdays = weekdaysInMonth(year, month0) - excused;
   return Math.max(0, workdays) * POLICY.WORKING_HOURS_PER_DAY;
 }
 
