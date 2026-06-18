@@ -65,6 +65,22 @@ export function shiftLabel(shift: Shift): string {
 }
 
 /**
+ * Standard clock-in / clock-out times for a shift, as "HH:MM" 24-hour strings.
+ * Used to auto-fill manual attendance entry when one side is left blank.
+ */
+export function shiftDefaultTimes(shift: Shift): {
+  clockIn: string;
+  clockOut: string;
+} {
+  const c = SHIFTS[shift];
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    clockIn: `${pad(c.startHour)}:${pad(c.startMinute)}`,
+    clockOut: `${pad(c.endHour)}:${pad(c.endMinute)}`,
+  };
+}
+
+/**
  * Compute total worked hours (excluding the 1-hour break) for a clock-in/out pair.
  * Returns 0 if either is missing or the pair is invalid.
  */
