@@ -125,10 +125,12 @@ export async function summarizeMonth(
     const d = new Date(h.date + "T00:00:00");
     return !isWeekend(d);
   }).length;
+  const holidayKeys = new Set(hols.map((h) => h.date));
 
   let daysPresent = 0;
   let daysAbsent = 0;
   let daysPaidLeave = 0;
+  let paidLeaveWeekdays = 0;
   let totalHours = 0;
   let overtimeChunks = 0;
   let weekendHoursWorked = 0;
@@ -146,6 +148,10 @@ export async function summarizeMonth(
       daysAbsent++;
     } else if (r.status === "paid_leave") {
       daysPaidLeave++;
+      // A weekday paid-leave day reduces the target by 8h (hours-neutral),
+      // mirroring holidays. Skip weekends (not in the target) and days already
+      // counted as holidays so the target isn't reduced twice for one date.
+      if (!wknd && !holidayKeys.has(r.date)) paidLeaveWeekdays++;
     }
   }
 
@@ -157,7 +163,12 @@ export async function summarizeMonth(
     daysPaidLeave,
     totalHours,
     overtimeChunks,
-    expectedHours: expectedMonthlyHours(year, month0, holidayWeekdays),
+    expectedHours: expectedMonthlyHours(
+      year,
+      month0,
+      holidayWeekdays,
+      paidLeaveWeekdays
+    ),
     weekendHoursWorked,
     paidLeavesUsedThisMonth: daysPaidLeave,
   };
