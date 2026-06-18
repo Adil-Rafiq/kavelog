@@ -340,6 +340,7 @@ export function CalendarView({
           dateKey={selected}
           record={recordMap.get(selected) ?? null}
           holiday={holidayMap.get(selected) ?? null}
+          shift={shift}
           onClose={() => setSelected(null)}
           onSaved={() => {
             setSelected(null);
