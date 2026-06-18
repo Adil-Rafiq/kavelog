@@ -115,14 +115,19 @@ export function AppShell({
 
           <div className="border-t border-border/60 p-3">
             <div className="flex items-center justify-between gap-2 rounded-[10px] bg-secondary/40 p-3">
-              <div className="min-w-0 flex-1">
+              <Link
+                href="/account"
+                onClick={() => setOpen(false)}
+                aria-label="Account settings"
+                className="min-w-0 flex-1 rounded-md transition-opacity hover:opacity-80"
+              >
                 <div className="truncate text-sm text-foreground">
                   {user.name || user.email}
                 </div>
                 <div className="truncate text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                   {user.role}
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={async () => {
                   await signOut({ redirect: false });
