@@ -1,5 +1,3 @@
-[ ] Fix forget password
-
 [x] Show password UX
 [x] Calendar page view broken on mobile
 [x] Highlight the holiday on the calendar, also show it on the Today page as well
@@ -13,3 +11,4 @@
 [x] Tickets submission not working. Getting 500 error.
 [x] Add Vercel analytics
 [x] Make app installable (PWA): manifest, icons, theme-color, offline page, service worker
+[x] Fix forget password
