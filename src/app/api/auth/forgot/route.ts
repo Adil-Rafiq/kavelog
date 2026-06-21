@@ -22,29 +22,38 @@ export async function POST(req: Request) {
   }
 
   const lower = parsed.data.email.toLowerCase();
+
   const [user] = await db
     .select({ id: users.id, status: users.status, email: users.email })
     .from(users)
     .where(eq(users.email, lower))
     .limit(1);
 
-  if (user && user.status !== "rejected") {
-    const raw = randomBytes(32).toString("hex");
-    const tokenHash = createHash("sha256").update(raw).digest("hex");
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
+  if (!user) {
+    return NextResponse.json({ ok: true });
+  }
 
+  if (user.status === "rejected") {
+    return NextResponse.json({ ok: true });
+  }
+
+  const raw = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(raw).digest("hex");
+  const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
+
+  try {
     await db.insert(passwordResetTokens).values({
       userId: user.id,
       tokenHash,
       expiresAt,
     });
-
-    const base =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      new URL(req.url).origin;
-    const link = `${base}/reset?token=${raw}`;
-    await sendResetEmail(user.email, link);
+  } catch (error) {
+    return NextResponse.json({ ok: true });
   }
+
+  const base = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+  const link = `${base}/reset?token=${raw}`;
+  await sendResetEmail(user.email, link);
 
   return NextResponse.json({ ok: true });
 }
