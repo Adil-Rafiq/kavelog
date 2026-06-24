@@ -53,15 +53,11 @@ export function DayEditor({
 
   const defaults = React.useMemo(() => shiftDefaultTimes(shift), [shift]);
 
-  // When the user fills one time and leaves the other blank, auto-fill the
-  // empty side with the shift default. Never overwrites a value the user set.
   function handleClockInChange(value: string) {
     setClockIn(value);
-    if (value && !clockOut) setClockOut(defaults.clockOut);
   }
   function handleClockOutChange(value: string) {
     setClockOut(value);
-    if (value && !clockIn) setClockIn(defaults.clockIn);
   }
 
   const dateLabel = new Date(dateKey + "T00:00:00").toLocaleDateString(
@@ -170,10 +166,6 @@ export function DayEditor({
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Fill one time and the other defaults to your shift (
-                {shiftLabel(shift)}). Edit either freely.
-              </p>
             </div>
           )}
 
