@@ -101,9 +101,9 @@ export interface MonthSummary {
   totalHours: number;
   overtimeChunks: number;
   expectedHours: number;
-  /** Hours worked on working days that have already fully elapsed (today excluded). */
+  /** Hours worked on elapsed working days (today included once it's a completed record). */
   hoursWorkedToDate: number;
-  /** Target hours for working days that have already fully elapsed (today excluded). */
+  /** Target hours for elapsed working days (today included once it's a completed record). */
   expectedHoursToDate: number;
   weekendHoursWorked: number;
   paidLeavesUsedThisMonth: number;
@@ -132,20 +132,34 @@ export async function summarizeMonth(
   const holidayKeys = new Set(hols.map((h) => h.date));
 
   // "To date" figures power the month-pace indicator: how the user is tracking
-  // against the target for working days that have *already elapsed*. Today is
-  // in progress, so it's excluded from both the worked and expected sides
-  // (comparing a partial day would distort the signal). For a fully past month
-  // this equals the whole month; for a future month it's zero.
+  // against the target for working days that have *already elapsed*. A day
+  // still in progress is excluded from both the worked and expected sides
+  // (comparing a partial day would distort the signal). Today counts only once
+  // it's a *completed* record — clocked out, or marked absent/paid-leave — so
+  // logging today moves the pace immediately instead of only rolling in
+  // tomorrow. A clock-in without a clock-out is still open, so it stays out.
+  // For a fully past month this equals the whole month; for a future month
+  // it's zero.
   const todayKey = toDateKey(new Date());
+  const todayRec = records.find((r) => r.date === todayKey);
+  const todayDone =
+    !!todayRec &&
+    (todayRec.status !== "present" ||
+      (todayRec.clockIn != null && todayRec.clockOut != null));
+  const countsToDate = (dateKey: string) =>
+    dateKey < todayKey || (todayDone && dateKey === todayKey);
+
   const lastDay = end.getDate();
   let elapsedWeekdays = 0;
   for (let day = 1; day <= lastDay; day++) {
     const d = new Date(year, month0, day);
-    if (toDateKey(d) >= todayKey) break;
+    const dk = toDateKey(d);
+    if (dk > todayKey) break;
+    if (!countsToDate(dk)) continue;
     if (!isWeekend(d)) elapsedWeekdays++;
   }
   const holidayWeekdaysToDate = hols.filter((h) => {
-    if (h.date >= todayKey) return false;
+    if (!countsToDate(h.date)) return false;
     const d = new Date(h.date + "T00:00:00");
     return !isWeekend(d);
   }).length;
@@ -167,7 +181,7 @@ export async function summarizeMonth(
       daysPresent++;
       const hrs = computeWorkedHours(r.clockIn, r.clockOut);
       totalHours += hrs;
-      if (r.date < todayKey) hoursWorkedToDate += hrs;
+      if (countsToDate(r.date)) hoursWorkedToDate += hrs;
       if (wknd) weekendHoursWorked += hrs;
       overtimeChunks += r.overtimeChunks ?? 0;
     } else if (r.status === "absent") {
@@ -179,7 +193,7 @@ export async function summarizeMonth(
       // counted as holidays so the target isn't reduced twice for one date.
       if (!wknd && !holidayKeys.has(r.date)) {
         paidLeaveWeekdays++;
-        if (r.date < todayKey) paidLeaveWeekdaysToDate++;
+        if (countsToDate(r.date)) paidLeaveWeekdaysToDate++;
       }
     }
   }
