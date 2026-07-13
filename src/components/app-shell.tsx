@@ -16,6 +16,7 @@ import {
   Building2,
   Menu,
   X,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -45,6 +46,7 @@ export function AppShell({
     { href: "/calendar", label: "Calendar", icon: Calendar },
     { href: "/reports", label: "Reports", icon: ChartLine },
     { href: "/support", label: "Support", icon: LifeBuoy },
+    { href: "/account", label: "Account", icon: UserCog },
   ];
 
   const adminNav = [
@@ -66,7 +68,7 @@ export function AppShell({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 w-64 shrink-0 border-r border-border bg-background/95 backdrop-blur",
-          "transform transition-transform duration-200 ease-out md:translate-x-0 md:static md:bg-background/40",
+          "transform transition-transform duration-200 ease-out md:translate-x-0 md:sticky md:top-0 md:h-screen md:bg-background/40",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -83,7 +85,7 @@ export function AppShell({
               <X size={18} />
             </button>
           </div>
-          <nav className="flex flex-1 flex-col gap-0.5 px-3">
+          <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3">
             <SectionLabel>Workspace</SectionLabel>
             {nav.map((n) => (
               <NavLink
