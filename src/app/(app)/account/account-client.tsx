@@ -120,19 +120,21 @@ function AutoLogSection({
           Days you already logged are never changed.
         </p>
         <button
+          type="button"
+          role="switch"
           onClick={() => toggle(!enabled)}
           disabled={pending}
-          aria-pressed={enabled}
+          aria-checked={enabled}
           aria-label="Auto-log my shift"
-          className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors disabled:opacity-60 ${
             enabled
               ? "border-primary/40 bg-primary"
               : "border-border bg-secondary"
           }`}
         >
           <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-background transition-transform ${
-              enabled ? "translate-x-6" : "translate-x-0.5"
+            className={`inline-block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${
+              enabled ? "translate-x-6" : "translate-x-1"
             }`}
           />
         </button>
