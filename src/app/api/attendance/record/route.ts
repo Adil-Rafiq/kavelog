@@ -80,6 +80,8 @@ export async function POST(req: Request) {
         notes: parsed.data.notes ?? null,
         overtimeChunks,
         editedByAdmin: editedByAdmin || existing.editedByAdmin,
+        // A manual save is exactly the overwrite that retires the auto-log flag.
+        autoLogged: false,
         updatedAt: new Date(),
       })
       .where(eq(attendanceRecords.id, existing.id))

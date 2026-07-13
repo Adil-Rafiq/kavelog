@@ -80,6 +80,7 @@ export async function GET(req: Request) {
         clockIn,
         clockOut,
         overtimeChunks: computeOvertimeChunks(clockIn, clockOut, shift),
+        autoLogged: true,
       };
     });
 

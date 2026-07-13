@@ -112,6 +112,13 @@ export const attendanceRecords = pgTable(
     overtimeChunks: integer("overtime_chunks").notNull().default(0),
     notes: text("notes"),
     editedByAdmin: boolean("edited_by_admin").notNull().default(false),
+    /**
+     * True when this record was created by the nightly auto-log cron (see
+     * users.autoLogShift) rather than by the employee or an admin. Cleared the
+     * moment the day is manually touched, so the flag only ever marks an
+     * untouched auto-fill the user can review.
+     */
+    autoLogged: boolean("auto_logged").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

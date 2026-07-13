@@ -63,6 +63,7 @@ export async function POST() {
       .set({
         clockIn: now,
         status: "present",
+        autoLogged: false,
         updatedAt: new Date(),
       })
       .where(eq(attendanceRecords.id, existing.id))
@@ -81,6 +82,7 @@ export async function POST() {
         clockOut: now,
         overtimeChunks: overtime,
         status: "present",
+        autoLogged: false,
         updatedAt: new Date(),
       })
       .where(eq(attendanceRecords.id, existing.id))

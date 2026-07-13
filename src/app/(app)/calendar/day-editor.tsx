@@ -18,6 +18,7 @@ interface RecordInput {
   clockIn: string | null;
   clockOut: string | null;
   notes: string | null;
+  autoLogged?: boolean;
 }
 
 export function DayEditor({
@@ -132,6 +133,18 @@ export function DayEditor({
         </div>
         <div className="flex flex-col gap-5 p-5">
           {holiday && <Badge variant="holiday">Holiday — {holiday}</Badge>}
+
+          {record?.autoLogged && (
+            <div className="flex flex-col gap-1.5">
+              <Badge variant="signal" className="self-start">
+                Auto-logged
+              </Badge>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Filled in automatically from your shift because the day was left
+                blank. Saving your own times replaces it.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="status">Status</Label>

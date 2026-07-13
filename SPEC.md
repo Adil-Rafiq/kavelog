@@ -66,6 +66,7 @@ KaveLog is a self-managed employee attendance tracking web app for Kavelogics em
 ### Auto-Log Logic
 - `Absent` is a **manual status only** — the app never auto-marks anyone absent. A weekday a user forgets to log simply stays blank.
 - **Opt-in auto-log**: each user can enable "Auto-log my shift" on their account page. When on, a nightly job fills any fully-missed weekday (no record yet, not a holiday) with a `Present` record using their shift's default clock-in/out (e.g. 10:00 AM – 7:00 PM). It never touches days already logged, weekends, holidays, or users who haven't opted in.
+- **Auto-logged flag**: auto-filled records carry an `autoLogged` flag so the employee can tell them apart from ones they entered themselves — surfaced as an "Auto" marker on the calendar day and an "Auto-logged" notice in the day editor. The flag clears automatically the moment the day is manually edited (via the day editor or a clock in/out), so it only ever marks an untouched auto-fill.
 - **Weekends (Sat–Sun)**: left blank by default; employees can voluntarily clock in if they worked (counts toward monthly totals).
 
 ---

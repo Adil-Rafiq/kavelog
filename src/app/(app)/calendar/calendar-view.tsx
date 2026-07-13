@@ -22,6 +22,7 @@ interface RecordView {
   overtimeChunks: number;
   notes: string | null;
   editedByAdmin: boolean;
+  autoLogged: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -319,6 +320,11 @@ export function CalendarView({
                               +{rec.overtimeChunks} OT
                             </span>
                           ) : null}
+                          {rec?.autoLogged && (
+                            <span className="truncate text-[9px] font-medium uppercase tracking-[0.14em] text-primary/80">
+                              Auto
+                            </span>
+                          )}
                           {holiday && (
                             <span className="truncate text-[10px] font-medium text-info">
                               {holiday}
