@@ -147,6 +147,12 @@ function TourRunner({
   const [mounted, setMounted] = React.useState(false);
   const [rect, setRect] = React.useState<DOMRect | null>(null);
   const [coachPos, setCoachPos] = React.useState<CoachPos | null>(null);
+  // The target couldn't be located after polling — reveal a centered fallback
+  // card so the user is never trapped behind a blank scrim.
+  const [stuck, setStuck] = React.useState(false);
+  // Locating has run long enough to be worth a spinner (avoids a flicker on
+  // fast same-page hops, where the target is found almost immediately).
+  const [slowLoad, setSlowLoad] = React.useState(false);
   const elRef = React.useRef<HTMLElement | null>(null);
   const coachRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -172,6 +178,7 @@ function TourRunner({
 
     setRect(null);
     setCoachPos(null);
+    setStuck(false);
     elRef.current = null;
 
     if (pathname !== step.path) {
@@ -194,6 +201,9 @@ function TourRunner({
       }
       // Poll while the page (and its data) finish loading after navigation.
       if (tries++ < 120) raf = requestAnimationFrame(find);
+      // Genuinely absent target — reveal the card centered so the tour can
+      // still be read and dismissed rather than hanging on a blank scrim.
+      else setStuck(true);
     };
     find();
 
@@ -202,6 +212,17 @@ function TourRunner({
       cancelAnimationFrame(raf);
     };
   }, [index, pathname, step.path, step.selector, router]);
+
+  // Only bother with a spinner if locating drags on, so quick same-page hops
+  // don't flash one. Clears the instant a target is measured (or we fall back).
+  React.useEffect(() => {
+    if (rect || stuck) {
+      setSlowLoad(false);
+      return;
+    }
+    const t = setTimeout(() => setSlowLoad(true), 240);
+    return () => clearTimeout(t);
+  }, [rect, stuck]);
 
   // Keep the spotlight glued to the element as the page scrolls or resizes.
   React.useEffect(() => {
@@ -270,6 +291,11 @@ function TourRunner({
   // Hide the card for the one frame between having a target and knowing its
   // size, so it never flashes centered before it anchors.
   const measuring = Boolean(rect) && !coachPos;
+  // The card is only ever shown attached to its target (or centered as a
+  // last-resort fallback). While we navigate to a step's page and wait for the
+  // target to mount, we keep just the dim scrim up — so the card never floats
+  // over an unrelated page mid-navigation.
+  const showCard = Boolean(rect) || stuck;
 
   return createPortal(
     <div aria-live="polite">
@@ -288,7 +314,8 @@ function TourRunner({
 
       {holeStyle && <div style={holeStyle} />}
 
-      {/* Coach layer — flex-centers the card until it can anchor to the target. */}
+      {/* Coach layer — holds the card once its target is located, or a spinner
+          while we navigate to the step's page. Flex-centers until it anchors. */}
       <div
         style={{
           position: "fixed",
@@ -301,6 +328,7 @@ function TourRunner({
           padding: anchored ? 0 : 12,
         }}
       >
+        {showCard ? (
         <div
           ref={coachRef}
           role="dialog"
@@ -376,6 +404,12 @@ function TourRunner({
             </div>
           </div>
         </div>
+        ) : slowLoad ? (
+          <div
+            aria-hidden
+            className="h-7 w-7 animate-spin rounded-full border-2 border-white/25 border-t-white"
+          />
+        ) : null}
       </div>
     </div>,
     document.body
