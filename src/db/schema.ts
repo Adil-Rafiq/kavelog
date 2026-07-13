@@ -82,6 +82,13 @@ export const users = pgTable(
      */
     autoLogShift: boolean("auto_log_shift").notNull().default(false),
     /**
+     * When true, the user has opted into push reminders (clock-in/out nudges and
+     * "yesterday isn't logged" notices). Account-level opt-in; the actual browser
+     * push subscriptions live per-device in pushSubscriptions. A reminder is only
+     * sent when this is true AND the user has at least one live subscription.
+     */
+    remindersEnabled: boolean("reminders_enabled").notNull().default(false),
+    /**
      * When the user finished (or skipped) the first-login walkthrough. Null
      * means they haven't seen it yet, so the spotlight tour auto-starts. Set
      * once and it never auto-starts again, on any device.
@@ -180,6 +187,33 @@ export const notifications = pgTable(
   (t) => ({
     userIdx: index("notifications_user_idx").on(t.userId),
     userReadIdx: index("notifications_user_read_idx").on(t.userId, t.read),
+  })
+);
+
+// ============================================================================
+// PUSH SUBSCRIPTIONS (Web Push, one row per browser/device)
+// ============================================================================
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The push service endpoint URL — unique per browser subscription. */
+    endpoint: text("endpoint").notNull(),
+    /** The subscription's public key (ECDH P-256) for payload encryption. */
+    p256dh: text("p256dh").notNull(),
+    /** The subscription's auth secret for payload encryption. */
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    endpointIdx: uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint),
+    userIdx: index("push_subscriptions_user_idx").on(t.userId),
   })
 );
 
@@ -285,7 +319,18 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   notifications: many(notifications),
   supportTickets: many(supportTickets),
   supportMessages: many(supportMessages),
+  pushSubscriptions: many(pushSubscriptions),
 }));
+
+export const pushSubscriptionsRelations = relations(
+  pushSubscriptions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [pushSubscriptions.userId],
+      references: [users.id],
+    }),
+  })
+);
 
 export const attendanceRecordsRelations = relations(
   attendanceRecords,
@@ -350,6 +395,8 @@ export type NewSupportMessage = typeof supportMessages.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type Setting = typeof settings.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
 
 // ============================================================================
 // SETTINGS KEYS (used as constants)

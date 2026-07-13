@@ -1,0 +1,49 @@
+name: KaveLog reminders
+
+# Fires the push-reminder endpoint at fixed office-time slots. Vercel Hobby caps
+# native crons at 2, so scheduling lives here instead. Times are UTC; the app
+# resolves "today"/"yesterday" in the office timezone. Each schedule maps to one
+# `slot` (see .env / src/app/api/cron/reminders/route.ts).
+on:
+  schedule:
+    - cron: "45 4 * * *" #  09:45 PKT — first_yesterday
+    - cron: "30 5 * * *" #  10:30 PKT — first_clockin
+    - cron: "45 12 * * *" # 17:45 PKT — second_yesterday
+    - cron: "15 14 * * *" # 19:15 PKT — first_clockout
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "Reminder slot to fire manually"
+        required: true
+        type: choice
+        options:
+          - first_yesterday
+          - first_clockin
+          - second_yesterday
+          - first_clockout
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve slot from schedule
+        id: slot
+        run: |
+          case "${{ github.event.schedule }}" in
+            "45 4 * * *")   echo "slot=first_yesterday"  >> "$GITHUB_OUTPUT" ;;
+            "30 5 * * *")   echo "slot=first_clockin"    >> "$GITHUB_OUTPUT" ;;
+            "45 12 * * *")  echo "slot=second_yesterday" >> "$GITHUB_OUTPUT" ;;
+            "15 14 * * *")  echo "slot=first_clockout"   >> "$GITHUB_OUTPUT" ;;
+            *)              echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Fire reminder
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          SLOT="${{ steps.slot.outputs.slot }}"
+          if [ -z "$SLOT" ]; then echo "No slot resolved"; exit 1; fi
+          echo "Firing reminder slot: $SLOT"
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/reminders?slot=$SLOT"

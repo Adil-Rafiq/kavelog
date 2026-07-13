@@ -18,6 +18,12 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "@/components/ui/toaster";
 import { shiftLabel, type Shift } from "@/lib/policy";
 import { useTour } from "@/components/tour/onboarding-tour";
+import {
+  isPushSupported,
+  pushPermission,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from "@/lib/push-client";
 
 interface DepartmentOption {
   id: string;
@@ -31,6 +37,7 @@ interface Profile {
   role: "admin" | "employee";
   departmentId: string | null;
   autoLogShift: boolean;
+  remindersEnabled: boolean;
 }
 
 export function AccountClient({
@@ -44,6 +51,7 @@ export function AccountClient({
     <div className="flex max-w-2xl flex-col gap-6">
       <ProfileSection profile={profile} departments={departments} />
       <AutoLogSection profile={profile} departments={departments} />
+      <RemindersSection profile={profile} />
       <PasswordSection />
       <ReplayTour />
     </div>
@@ -138,6 +146,140 @@ function AutoLogSection({
             }`}
           />
         </button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RemindersSection({ profile }: { profile: Profile }) {
+  const [enabled, setEnabled] = React.useState(profile.remindersEnabled);
+  const [pending, setPending] = React.useState(false);
+  const [supported, setSupported] = React.useState(true);
+  const [blocked, setBlocked] = React.useState(false);
+
+  // Capability + permission are browser-only — read them after mount to avoid
+  // an SSR/client mismatch.
+  React.useEffect(() => {
+    setSupported(isPushSupported());
+    setBlocked(pushPermission() === "denied");
+  }, []);
+
+  async function persist(next: boolean): Promise<boolean> {
+    const res = await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ remindersEnabled: next }),
+    });
+    return res.ok;
+  }
+
+  async function toggle(next: boolean) {
+    if (pending) return;
+    setPending(true);
+
+    if (next) {
+      // Subscribe first (this prompts for permission inside the click gesture).
+      const result = await subscribeToPush();
+      if (!result.ok) {
+        setPending(false);
+        if (result.reason === "denied") {
+          setBlocked(true);
+          toast({
+            kind: "error",
+            title: "Notifications are blocked",
+            description:
+              "Allow notifications for KaveLog in your browser settings, then try again.",
+          });
+        } else if (result.reason === "unsupported") {
+          setSupported(false);
+          toast({
+            kind: "error",
+            title: "Not available on this device",
+            description:
+              "On iPhone, install KaveLog to your Home Screen first.",
+          });
+        } else {
+          toast({ kind: "error", title: "Could not enable reminders" });
+        }
+        return;
+      }
+      const ok = await persist(true);
+      setPending(false);
+      if (!ok) {
+        await unsubscribeFromPush();
+        toast({ kind: "error", title: "Could not save" });
+        return;
+      }
+      setEnabled(true);
+      setBlocked(false);
+      toast({
+        kind: "success",
+        title: "Reminders turned on",
+        description: "This device will now get attendance nudges.",
+      });
+    } else {
+      setEnabled(false);
+      const ok = await persist(false);
+      await unsubscribeFromPush();
+      setPending(false);
+      if (!ok) {
+        setEnabled(true);
+        toast({ kind: "error", title: "Could not save" });
+        return;
+      }
+      toast({ kind: "success", title: "Reminders turned off" });
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Attendance reminders</CardTitle>
+        <CardDescription>
+          Get a push notification when you have a gap to fill, so your log stays
+          complete.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground">
+            We&apos;ll nudge you if you haven&apos;t clocked in by mid-morning,
+            if you&apos;re still clocked in after your shift ends, or if
+            yesterday was left blank. Reminders are enabled per device.
+          </p>
+          <button
+            type="button"
+            role="switch"
+            onClick={() => toggle(!enabled)}
+            disabled={pending || (!supported && !enabled)}
+            aria-checked={enabled}
+            aria-label="Attendance reminders"
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors disabled:opacity-60 ${
+              enabled
+                ? "border-primary/40 bg-primary"
+                : "border-border bg-secondary"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${
+                enabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+        {!supported && (
+          <p className="text-xs text-warning">
+            This browser can&apos;t receive push notifications. On iPhone,
+            install KaveLog to your Home Screen first (Share → Add to Home
+            Screen).
+          </p>
+        )}
+        {blocked && supported && (
+          <p className="text-xs text-warning">
+            Notifications are blocked for KaveLog. Enable them in your
+            browser&apos;s site settings, then turn reminders on.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

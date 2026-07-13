@@ -65,3 +65,43 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+/* Web Push — opt-in attendance reminders.
+ * The server sends a JSON payload ({ title, body, url, tag }); we surface it as
+ * an OS notification and, on click, focus an existing KaveLog window (navigating
+ * it to the target path) or open a new one. */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = {};
+  }
+  const title = data.title || "KaveLog";
+  const options = {
+    body: data.body || "",
+    icon: "/icons/icon-192",
+    badge: "/icons/icon-192",
+    tag: data.tag,
+    data: { url: data.url || "/" },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ("focus" in client) {
+            client.navigate(target).catch(() => {});
+            return client.focus();
+          }
+        }
+        if (self.clients.openWindow) return self.clients.openWindow(target);
+      })
+  );
+});

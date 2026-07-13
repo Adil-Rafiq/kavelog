@@ -305,3 +305,31 @@ export function isWeekend(date: Date): boolean {
   const day = date.getDay();
   return day === 0 || day === 6;
 }
+
+/**
+ * The `YYYY-MM-DD` calendar day an instant falls on, in the office timezone.
+ * Used by the reminder cron so "today"/"yesterday" are resolved in Karachi
+ * wall-clock terms regardless of the (UTC) server clock.
+ */
+export function dateKeyInZone(
+  instant: Date,
+  timeZone: string = APP_TIME_ZONE
+): string {
+  // en-CA formats as YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
+}
+
+/**
+ * Whether a `YYYY-MM-DD` key is a Saturday or Sunday. Timezone-independent —
+ * the day-of-week of a calendar date is fixed.
+ */
+export function dateKeyIsWeekend(dateKey: string): boolean {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return dow === 0 || dow === 6;
+}

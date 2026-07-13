@@ -61,6 +61,12 @@ All the real complexity is in two files. Read them before touching anything atte
 - The nightly cron `GET /api/cron/auto-log` (Vercel, 00:05 UTC via `vercel.json`) fills *yesterday* for users who set `users.autoLogShift = true`, but only if the day is a weekday, not a holiday, and has no existing record. It writes a `present` record from shift defaults with `autoLogged: true`. Protected by `CRON_SECRET` (Bearer header).
 - The `autoLogged` flag is cleared to `false` the moment the day is manually touched — both `api/attendance/clock` and `api/attendance/record` reset it on write. It exists purely so the UI can mark untouched auto-fills. Keep both write paths clearing it.
 
+### Push reminders (opt-in, push-only)
+- Web Push nudges to keep the personal log complete. **Push-only** — reminders never create in-app (`notify()`) rows, so the bell stays for real events. Opt-in via `users.remindersEnabled` + the Account toggle, which also creates the per-device browser subscription stored in `push_subscriptions`. A reminder fires only when `remindersEnabled` is true AND the user has ≥1 subscription.
+- `GET|POST /api/cron/reminders?slot=<slot>` sends one slot's reminders; `CRON_SECRET`-protected like auto-log. Slots: `first_yesterday` (09:45 PKT), `first_clockin` (10:30, first shift, incl. auto-log users — clocking in live records real times), `second_yesterday` (17:45), `first_clockout` (19:15). Each skips weekends/holidays by the *relevant* date and never fires when the condition is already met.
+- Scheduling is **external** (`.github/workflows/reminders.yml`) because Vercel Hobby caps native crons at 2. GitHub Actions maps each `cron:` → a `slot` and curls the endpoint with the secret. Auto-log stays on its native Vercel cron.
+- Delivery is `src/lib/push.ts` (server, VAPID via `web-push`, prunes 404/410 subs); browser side is `src/lib/push-client.ts` + the SW `push`/`notificationclick` handlers in `public/sw.js`. Push needs the SW, which `PwaRegister` only registers in production.
+
 ## Data model notes (`src/db/schema.ts`)
 - One attendance row per `(userId, date)` — enforced by `attendance_user_date_idx`. All mutation paths upsert against this pair.
 - `settings` is a key-value table; keys are in `SETTING_KEYS` (currently just `open_registration`). Read/write via `src/lib/settings.ts`.
@@ -68,4 +74,4 @@ All the real complexity is in two files. Read them before touching anything atte
 - `onboardedAt` (null = tour not yet seen) drives the first-login spotlight tour, wired in `src/app/(app)/layout.tsx` → `TourProvider`.
 
 ## Environment
-Required: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`. Also used: `CRON_SECRET` (cron auth), `RESEND_API_KEY` + `EMAIL_FROM` (password-reset email), `NEXT_PUBLIC_APP_URL` (reset links), `APP_TIME_ZONE` (optional shift-zone override). See `.env.example`.
+Required: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`. Also used: `CRON_SECRET` (cron auth), `RESEND_API_KEY` + `EMAIL_FROM` (password-reset email), `NEXT_PUBLIC_APP_URL` (reset links), `APP_TIME_ZONE` (optional shift-zone override), and the Web Push VAPID keys `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (push reminders). See `.env.example`. The reminder GitHub Action also needs repo secrets `APP_URL` + `CRON_SECRET`.

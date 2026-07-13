@@ -11,6 +11,7 @@ const schema = z.object({
   name: z.string().min(2).max(100).optional(),
   departmentId: z.string().uuid().nullable().optional(),
   autoLogShift: z.boolean().optional(),
+  remindersEnabled: z.boolean().optional(),
 });
 
 /**
@@ -34,12 +35,13 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { name, departmentId, autoLogShift } = parsed.data;
+  const { name, departmentId, autoLogShift, remindersEnabled } = parsed.data;
 
   const updates: Partial<typeof users.$inferInsert> = {};
   if (name !== undefined) updates.name = name.trim();
   if (departmentId !== undefined) updates.departmentId = departmentId;
   if (autoLogShift !== undefined) updates.autoLogShift = autoLogShift;
+  if (remindersEnabled !== undefined) updates.remindersEnabled = remindersEnabled;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

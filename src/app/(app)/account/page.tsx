@@ -18,6 +18,7 @@ export default async function AccountPage() {
       role: users.role,
       departmentId: users.departmentId,
       autoLogShift: users.autoLogShift,
+      remindersEnabled: users.remindersEnabled,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
@@ -49,6 +50,7 @@ export default async function AccountPage() {
           role: user.role,
           departmentId: user.departmentId,
           autoLogShift: user.autoLogShift,
+          remindersEnabled: user.remindersEnabled,
         }}
         departments={depts}
       />
