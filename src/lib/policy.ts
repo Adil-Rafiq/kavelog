@@ -11,6 +11,14 @@
 
 export type Shift = "first" | "second";
 
+/**
+ * IANA timezone the office shift wall-clock times are expressed in. Employees
+ * and shift hours (10 AM–7 PM, 6 PM–3 AM) are all in one office, so a single
+ * zone is enough. Overridable via env for other deployments. Karachi has no
+ * DST, so the offset is a constant +5.
+ */
+export const APP_TIME_ZONE = process.env.APP_TIME_ZONE ?? "Asia/Karachi";
+
 export const POLICY = {
   WORKING_HOURS_PER_DAY: 8,
   BREAK_HOURS_PER_DAY: 1,
@@ -78,6 +86,82 @@ export function shiftDefaultTimes(shift: Shift): {
     clockIn: `${pad(c.startHour)}:${pad(c.startMinute)}`,
     clockOut: `${pad(c.endHour)}:${pad(c.endMinute)}`,
   };
+}
+
+/**
+ * Convert a wall-clock time in a named timezone to the equivalent UTC instant.
+ *
+ * Uses the standard offset-measurement trick: format the naive-UTC guess back
+ * through the target zone to learn that zone's offset at that moment, then
+ * shift by it. Exact for zones without DST (e.g. Asia/Karachi) and correct at
+ * DST boundaries for zones that have it.
+ *
+ * This mirrors what the client-side day editor produces for manual entries
+ * (`new Date(y, mo, d, h, mi)` in the browser's local zone), so an auto-filled
+ * instant renders as the same wall-clock time as a hand-entered one.
+ */
+export function zonedWallTimeToUtc(
+  year: number,
+  month0: number,
+  day: number,
+  hour: number,
+  minute: number,
+  timeZone: string = APP_TIME_ZONE
+): Date {
+  const naiveUtc = Date.UTC(year, month0, day, hour, minute, 0, 0);
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const map: Record<string, number> = {};
+  for (const part of dtf.formatToParts(new Date(naiveUtc))) {
+    if (part.type !== "literal") map[part.type] = Number(part.value);
+  }
+  const zonedAsUtc = Date.UTC(
+    map.year,
+    map.month - 1,
+    map.day,
+    map.hour,
+    map.minute,
+    map.second
+  );
+  const offsetMs = zonedAsUtc - naiveUtc;
+  return new Date(naiveUtc - offsetMs);
+}
+
+/**
+ * Clock-in / clock-out instants for a shift on a given calendar day, anchored
+ * to the office timezone. For the second shift (crosses midnight) the clock-out
+ * lands on the next calendar day (e.g. 6 PM → 3 AM the following morning).
+ * Used to auto-fill a fully-missed weekday from the shift schedule.
+ */
+export function shiftDefaultInstants(
+  dateKey: string,
+  shift: Shift
+): { clockIn: Date; clockOut: Date } {
+  const c = SHIFTS[shift];
+  const [y, mo, d] = dateKey.split("-").map(Number);
+  const clockIn = zonedWallTimeToUtc(y, mo - 1, d, c.startHour, c.startMinute);
+
+  // Roll the clock-out onto the next calendar day for overnight shifts, using
+  // Date arithmetic so month/year boundaries are handled correctly.
+  const outDate = new Date(Date.UTC(y, mo - 1, d));
+  if (c.crossesMidnight) outDate.setUTCDate(outDate.getUTCDate() + 1);
+  const clockOut = zonedWallTimeToUtc(
+    outDate.getUTCFullYear(),
+    outDate.getUTCMonth(),
+    outDate.getUTCDate(),
+    c.endHour,
+    c.endMinute
+  );
+
+  return { clockIn, clockOut };
 }
 
 /**

@@ -29,6 +29,7 @@ interface Profile {
   email: string;
   role: "admin" | "employee";
   departmentId: string | null;
+  autoLogShift: boolean;
 }
 
 export function AccountClient({
@@ -41,8 +42,83 @@ export function AccountClient({
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <ProfileSection profile={profile} departments={departments} />
+      <AutoLogSection profile={profile} departments={departments} />
       <PasswordSection />
     </div>
+  );
+}
+
+function AutoLogSection({
+  profile,
+  departments,
+}: {
+  profile: Profile;
+  departments: DepartmentOption[];
+}) {
+  const [enabled, setEnabled] = React.useState(profile.autoLogShift);
+  const [pending, setPending] = React.useState(false);
+
+  // The shift is derived from the user's saved department (defaulting to first
+  // shift when none is set, matching how the rest of the app resolves shift).
+  const shift =
+    departments.find((d) => d.id === profile.departmentId)?.shift ?? "first";
+
+  async function toggle(next: boolean) {
+    setPending(true);
+    setEnabled(next);
+    const res = await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autoLogShift: next }),
+    });
+    setPending(false);
+    if (!res.ok) {
+      setEnabled(!next);
+      toast({ kind: "error", title: "Could not save" });
+      return;
+    }
+    toast({
+      kind: "success",
+      title: next ? "Auto-log turned on" : "Auto-log turned off",
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Auto-log my shift</CardTitle>
+        <CardDescription>
+          If you forget to log a weekday, record it automatically from your
+          shift instead of leaving it blank.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground">
+          Any weekday you didn&apos;t log (and isn&apos;t a holiday) will be
+          saved as present, clocked in and out at your shift times —{" "}
+          <span className="text-foreground">{shiftLabel(shift)}</span>
+          {!profile.departmentId && " (default shift — set a department above)"}.
+          Days you already logged are never changed.
+        </p>
+        <button
+          onClick={() => toggle(!enabled)}
+          disabled={pending}
+          aria-pressed={enabled}
+          aria-label="Auto-log my shift"
+          className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
+            enabled
+              ? "border-primary/40 bg-primary"
+              : "border-border bg-secondary"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-background transition-transform ${
+              enabled ? "translate-x-6" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      </CardContent>
+    </Card>
   );
 }
 

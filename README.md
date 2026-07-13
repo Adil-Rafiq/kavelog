@@ -78,7 +78,7 @@ The project is built for Vercel:
 3. Add environment variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `CRON_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `NEXT_PUBLIC_APP_URL`).
 4. Deploy.
 
-The `vercel.json` schedules `/api/cron/auto-absent` daily at 00:05 UTC to mark missed weekday clock-ins as absent. Set `CRON_SECRET` to protect the endpoint.
+The `vercel.json` schedules `/api/cron/auto-log` daily at 00:05 UTC. For users who enabled "Auto-log my shift" on their account page, it fills any fully-missed weekday with a Present record from their shift times; everyone else is left untouched (nothing is auto-marked absent). Set `CRON_SECRET` to protect the endpoint.
 
 ## Project structure
 

@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/cron/auto-absent",
+      "path": "/api/cron/auto-log",
       "schedule": "5 0 * * *"
     }
   ]

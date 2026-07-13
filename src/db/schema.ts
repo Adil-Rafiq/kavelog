@@ -75,6 +75,12 @@ export const users = pgTable(
     departmentId: uuid("department_id").references(() => departments.id, {
       onDelete: "set null",
     }),
+    /**
+     * When true, the daily auto-absent cron logs a fully-missed weekday as
+     * Present using the user's shift default times instead of marking Absent.
+     * Opt-in, self-service from the account page.
+     */
+    autoLogShift: boolean("auto_log_shift").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

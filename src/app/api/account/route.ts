@@ -8,11 +8,17 @@ import { auth } from "@/auth";
 export const runtime = "nodejs";
 
 const schema = z.object({
-  name: z.string().min(2).max(100),
+  name: z.string().min(2).max(100).optional(),
   departmentId: z.string().uuid().nullable().optional(),
+  autoLogShift: z.boolean().optional(),
 });
 
-/** Update the signed-in user's own profile (name + department). */
+/**
+ * Partially update the signed-in user's own profile. Only the fields present in
+ * the request body are changed, so the account page can save the profile form
+ * (name + department) and the "auto-log my shift" toggle independently without
+ * clobbering each other.
+ */
 export async function PATCH(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -28,7 +34,19 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { name, departmentId } = parsed.data;
+  const { name, departmentId, autoLogShift } = parsed.data;
+
+  const updates: Partial<typeof users.$inferInsert> = {};
+  if (name !== undefined) updates.name = name.trim();
+  if (departmentId !== undefined) updates.departmentId = departmentId;
+  if (autoLogShift !== undefined) updates.autoLogShift = autoLogShift;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: "No fields to update." },
+      { status: 400 }
+    );
+  }
 
   if (departmentId) {
     const [dept] = await db
@@ -44,14 +62,8 @@ export async function PATCH(req: Request) {
     }
   }
 
-  await db
-    .update(users)
-    .set({
-      name: name.trim(),
-      departmentId: departmentId ?? null,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, session.user.id));
+  updates.updatedAt = new Date();
+  await db.update(users).set(updates).where(eq(users.id, session.user.id));
 
   return NextResponse.json({ ok: true });
 }

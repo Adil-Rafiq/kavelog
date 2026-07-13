@@ -17,6 +17,7 @@ export default async function AccountPage() {
       email: users.email,
       role: users.role,
       departmentId: users.departmentId,
+      autoLogShift: users.autoLogShift,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
@@ -47,6 +48,7 @@ export default async function AccountPage() {
           email: user.email,
           role: user.role,
           departmentId: user.departmentId,
+          autoLogShift: user.autoLogShift,
         }}
         departments={depts}
       />
