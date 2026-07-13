@@ -169,6 +169,11 @@ No email notifications. All notifications appear as in-app bell/badge alerts.
 - Admin/report views optimized for desktop
 - Design implemented using the `/frontend-design:frontend-design` skill
 
+### First-login walkthrough
+- On a user's first login, a spotlight tour auto-starts and highlights one real control at a time, navigating across the actual pages: clock-in (Today) → monthly stats (Today) → calendar (fix a missed day) → reports/CSV export → the **Auto-log my shift** setting on Account.
+- Seen-state is **per-account** (`users.onboarded_at`): it shows exactly once and never auto-starts again on any device. Finishing or skipping both stamp it.
+- Users can replay it any time from **Account → Product tour → Take the tour**.
+
 ---
 
 ## Tech Stack
@@ -187,7 +192,7 @@ No email notifications. All notifications appear as in-app bell/badge alerts.
 ## Database Schema (Draft)
 
 ### users
-- id, name, email, password_hash, role (admin/employee), department_id, status (pending/active/rejected), created_at
+- id, name, email, password_hash, role (admin/employee), department_id, status (pending/active/rejected), auto_log_shift, onboarded_at, created_at
 
 ### departments
 - id, name, shift (first/second), created_at

@@ -82,7 +82,7 @@ export default async function TodayPage() {
       )}
 
       {/* HERO Clock In/Out */}
-      <div className="animate-reveal delay-100">
+      <div className="animate-reveal delay-100" data-tour="clock">
         <TodayPanel
           initialClockIn={clockInISO}
           initialClockOut={clockOutISO}
@@ -95,7 +95,7 @@ export default async function TodayPage() {
       <DotDivider />
 
       {/* This month */}
-      <section className="animate-reveal delay-150">
+      <section className="animate-reveal delay-150" data-tour="month">
         <div className="mb-4 flex items-end justify-between">
           <div>
             <h2 className="text-lg text-foreground">This month</h2>

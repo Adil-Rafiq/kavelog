@@ -81,6 +81,12 @@ export const users = pgTable(
      * Opt-in, self-service from the account page.
      */
     autoLogShift: boolean("auto_log_shift").notNull().default(false),
+    /**
+     * When the user finished (or skipped) the first-login walkthrough. Null
+     * means they haven't seen it yet, so the spotlight tour auto-starts. Set
+     * once and it never auto-starts again, on any device.
+     */
+    onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

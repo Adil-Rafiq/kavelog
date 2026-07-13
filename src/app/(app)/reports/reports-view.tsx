@@ -202,7 +202,7 @@ export function ReportsView({ role }: { role: "admin" | "employee" }) {
   return (
     <div className="flex flex-col gap-5">
       {/* Filters */}
-      <Card className="p-4">
+      <Card className="p-4" data-tour="reports">
         <CardContent
           className={cn(
             "grid grid-cols-1 gap-4 p-0 sm:grid-cols-2",

@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/select";
 import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "@/components/ui/toaster";
 import { shiftLabel, type Shift } from "@/lib/policy";
+import { useTour } from "@/components/tour/onboarding-tour";
 
 interface DepartmentOption {
   id: string;
@@ -44,6 +45,24 @@ export function AccountClient({
       <ProfileSection profile={profile} departments={departments} />
       <AutoLogSection profile={profile} departments={departments} />
       <PasswordSection />
+      <ReplayTour />
+    </div>
+  );
+}
+
+function ReplayTour() {
+  const { start } = useTour();
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-[10px] border border-dashed border-border px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm text-foreground">Product tour</p>
+        <p className="text-xs text-muted-foreground">
+          Replay the quick walkthrough of how KaveLog works.
+        </p>
+      </div>
+      <Button variant="outline" size="sm" onClick={start}>
+        Take the tour
+      </Button>
     </div>
   );
 }
@@ -84,7 +103,7 @@ function AutoLogSection({
   }
 
   return (
-    <Card>
+    <Card data-tour="autolog">
       <CardHeader>
         <CardTitle>Auto-log my shift</CardTitle>
         <CardDescription>

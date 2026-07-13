@@ -203,7 +203,7 @@ export function CalendarView({
       </div>
 
       {/* Grid */}
-      <Card className="p-3 md:p-4">
+      <Card className="p-3 md:p-4" data-tour="calendar">
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">
             <div className="grid grid-cols-7 gap-1 pb-2">
