@@ -79,6 +79,19 @@ export async function subscribeToPush(): Promise<SubscribeResult> {
   }
 }
 
+/**
+ * Whether this device already holds a live push subscription. Used by the
+ * account toggle to tell "reminders on account-wide" apart from "this device is
+ * actually set up to receive them" — the two can diverge when reminders default
+ * on but the browser has never been granted permission.
+ */
+export async function isSubscribedOnThisDevice(): Promise<boolean> {
+  if (!("serviceWorker" in navigator)) return false;
+  const reg = await navigator.serviceWorker.getRegistration();
+  const sub = await reg?.pushManager.getSubscription();
+  return Boolean(sub);
+}
+
 export async function unsubscribeFromPush(): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
   const reg = await navigator.serviceWorker.getRegistration();

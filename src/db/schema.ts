@@ -82,12 +82,14 @@ export const users = pgTable(
      */
     autoLogShift: boolean("auto_log_shift").notNull().default(false),
     /**
-     * When true, the user has opted into push reminders (clock-in/out nudges and
-     * "yesterday isn't logged" notices). Account-level opt-in; the actual browser
-     * push subscriptions live per-device in pushSubscriptions. A reminder is only
-     * sent when this is true AND the user has at least one live subscription.
+     * The account-level opt-in for push reminders (clock-in/out nudges and
+     * "yesterday isn't logged" notices). Defaults on so reminders are the
+     * expected experience; users can turn them off from the account page. The
+     * actual browser push subscriptions live per-device in pushSubscriptions, so
+     * a reminder is only sent when this is true AND the user has at least one
+     * live subscription — no one is notified without granting permission first.
      */
-    remindersEnabled: boolean("reminders_enabled").notNull().default(false),
+    remindersEnabled: boolean("reminders_enabled").notNull().default(true),
     /**
      * When the user finished (or skipped) the first-login walkthrough. Null
      * means they haven't seen it yet, so the spotlight tour auto-starts. Set

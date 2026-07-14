@@ -4,12 +4,14 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toaster";
+import { subscribeToPush } from "@/lib/push-client";
 
 /**
  * First-login product tour. A spotlight highlights one real control at a time,
  * walking the user across the actual pages (Today → Calendar → Reports →
  * Account) so each feature is shown where it lives. The finale lands on the
- * "Auto-log my shift" setting.
+ * "Attendance reminders" setting, where the user can allow notifications.
  *
  * Persistence is per-account: `users.onboarded_at`. The provider auto-starts
  * the tour when that column is null (passed down as `autoStart`), and any
@@ -23,8 +25,15 @@ interface Step {
   selector: string;
   title: string;
   body: string;
-  /** Emphasized (lime) coach card — used for the auto-log finale. */
+  /** Emphasized (lime) coach card — used for the reminders finale. */
   accent?: boolean;
+  /**
+   * Show an "Allow notifications" CTA on this step that triggers the browser
+   * push-permission prompt inside the click, then subscribes this device. Used
+   * so first-run users can turn reminders on right here instead of hunting for
+   * the account toggle later.
+   */
+  promptPush?: boolean;
 }
 
 const STEPS: Step[] = [
@@ -56,8 +65,15 @@ const STEPS: Step[] = [
     path: "/account",
     selector: '[data-tour="autolog"]',
     title: "Auto-log your shift",
-    body: "Here's the setting to know about: switch this on and any weekday you forget fills itself from your shift times — never left blank, never marked absent.",
+    body: "One handy setting: switch this on and any weekday you forget fills itself from your shift times — never left blank, never marked absent.",
+  },
+  {
+    path: "/account",
+    selector: '[data-tour="reminders"]',
+    title: "Reminders keep you on track",
+    body: "These are on by default — a gentle push nudge if you forget to clock in, clock out, or log yesterday. Allow notifications to start getting them (or switch reminders off any time).",
     accent: true,
+    promptPush: true,
   },
 ];
 
@@ -145,6 +161,7 @@ function TourRunner({
   const step = STEPS[index];
 
   const [mounted, setMounted] = React.useState(false);
+  const [pushBusy, setPushBusy] = React.useState(false);
   const [rect, setRect] = React.useState<DOMRect | null>(null);
   const [coachPos, setCoachPos] = React.useState<CoachPos | null>(null);
   // The target couldn't be located after polling — reveal a centered fallback
@@ -168,6 +185,41 @@ function TourRunner({
   const back = React.useCallback(() => {
     if (index > 0) setIndex(index - 1);
   }, [index, setIndex]);
+
+  // "Allow notifications" CTA: request permission + subscribe inside the click
+  // (browsers only surface the prompt from a gesture), then finish the tour.
+  const allowPush = React.useCallback(async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    const result = await subscribeToPush();
+    setPushBusy(false);
+    if (result.ok) {
+      toast({
+        kind: "success",
+        title: "Reminders on",
+        description: "This device will now get attendance nudges.",
+      });
+      next();
+    } else if (result.reason === "denied") {
+      toast({
+        kind: "error",
+        title: "Notifications blocked",
+        description: "You can enable them later from your account page.",
+      });
+    } else if (result.reason === "unsupported") {
+      toast({
+        kind: "error",
+        title: "Not available on this device",
+        description: "On iPhone, install KaveLog to your Home Screen first.",
+      });
+    } else {
+      toast({
+        kind: "error",
+        title: "Could not enable reminders",
+        description: "Please try again.",
+      });
+    }
+  }, [pushBusy, next]);
 
   // Locate the target for the current step, navigating to its page first if
   // needed, then measure it once it's in the DOM.
@@ -375,6 +427,16 @@ function TourRunner({
           <p className="mb-4 text-[13px] leading-relaxed text-muted-foreground">
             {step.body}
           </p>
+          {step.promptPush && (
+            <Button
+              size="sm"
+              onClick={allowPush}
+              disabled={pushBusy}
+              className="mb-3 w-full"
+            >
+              {pushBusy ? "Enabling…" : "Allow notifications"}
+            </Button>
+          )}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               {STEPS.map((_, i) => (
@@ -398,7 +460,11 @@ function TourRunner({
                   Back
                 </Button>
               )}
-              <Button size="sm" onClick={next}>
+              <Button
+                variant={step.promptPush ? "outline" : "primary"}
+                size="sm"
+                onClick={next}
+              >
                 {isLast ? "Finish" : "Next"}
               </Button>
             </div>

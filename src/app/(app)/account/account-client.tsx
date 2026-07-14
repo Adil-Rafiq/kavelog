@@ -20,9 +20,11 @@ import { shiftLabel, type Shift } from "@/lib/policy";
 import { useTour } from "@/components/tour/onboarding-tour";
 import {
   isPushSupported,
+  isSubscribedOnThisDevice,
   pushPermission,
   subscribeToPush,
   unsubscribeFromPush,
+  type SubscribeResult,
 } from "@/lib/push-client";
 
 interface DepartmentOption {
@@ -152,16 +154,25 @@ function AutoLogSection({
 }
 
 function RemindersSection({ profile }: { profile: Profile }) {
+  // `enabled` is the account-level opt-in; `subscribedHere` is whether *this*
+  // browser is actually set up to receive pushes. They diverge when reminders
+  // default on but the device has never granted permission.
   const [enabled, setEnabled] = React.useState(profile.remindersEnabled);
+  // null until the async check resolves, so the "set up this device" hint never
+  // flashes for a browser that's already subscribed.
+  const [subscribedHere, setSubscribedHere] = React.useState<boolean | null>(
+    null
+  );
   const [pending, setPending] = React.useState(false);
   const [supported, setSupported] = React.useState(true);
   const [blocked, setBlocked] = React.useState(false);
 
-  // Capability + permission are browser-only — read them after mount to avoid
-  // an SSR/client mismatch.
+  // Capability, permission, and this device's subscription are browser-only —
+  // read them after mount to avoid an SSR/client mismatch.
   React.useEffect(() => {
     setSupported(isPushSupported());
     setBlocked(pushPermission() === "denied");
+    isSubscribedOnThisDevice().then(setSubscribedHere);
   }, []);
 
   async function persist(next: boolean): Promise<boolean> {
@@ -173,6 +184,31 @@ function RemindersSection({ profile }: { profile: Profile }) {
     return res.ok;
   }
 
+  // Explain a failed subscribe attempt (shared by the toggle and the
+  // per-device "turn on here" button).
+  function reportSubscribeFailure(
+    reason: Extract<SubscribeResult, { ok: false }>["reason"]
+  ) {
+    if (reason === "denied") {
+      setBlocked(true);
+      toast({
+        kind: "error",
+        title: "Notifications are blocked",
+        description:
+          "Allow notifications for KaveLog in your browser settings, then try again.",
+      });
+    } else if (reason === "unsupported") {
+      setSupported(false);
+      toast({
+        kind: "error",
+        title: "Not available on this device",
+        description: "On iPhone, install KaveLog to your Home Screen first.",
+      });
+    } else {
+      toast({ kind: "error", title: "Could not enable reminders" });
+    }
+  }
+
   async function toggle(next: boolean) {
     if (pending) return;
     setPending(true);
@@ -182,25 +218,7 @@ function RemindersSection({ profile }: { profile: Profile }) {
       const result = await subscribeToPush();
       if (!result.ok) {
         setPending(false);
-        if (result.reason === "denied") {
-          setBlocked(true);
-          toast({
-            kind: "error",
-            title: "Notifications are blocked",
-            description:
-              "Allow notifications for KaveLog in your browser settings, then try again.",
-          });
-        } else if (result.reason === "unsupported") {
-          setSupported(false);
-          toast({
-            kind: "error",
-            title: "Not available on this device",
-            description:
-              "On iPhone, install KaveLog to your Home Screen first.",
-          });
-        } else {
-          toast({ kind: "error", title: "Could not enable reminders" });
-        }
+        reportSubscribeFailure(result.reason);
         return;
       }
       const ok = await persist(true);
@@ -211,6 +229,7 @@ function RemindersSection({ profile }: { profile: Profile }) {
         return;
       }
       setEnabled(true);
+      setSubscribedHere(true);
       setBlocked(false);
       toast({
         kind: "success",
@@ -221,6 +240,7 @@ function RemindersSection({ profile }: { profile: Profile }) {
       setEnabled(false);
       const ok = await persist(false);
       await unsubscribeFromPush();
+      setSubscribedHere(false);
       setPending(false);
       if (!ok) {
         setEnabled(true);
@@ -231,8 +251,33 @@ function RemindersSection({ profile }: { profile: Profile }) {
     }
   }
 
+  // Reminders are on account-wide, but this browser isn't subscribed yet —
+  // grant permission and register just this device without touching the flag.
+  async function enableThisDevice() {
+    if (pending) return;
+    setPending(true);
+    const result = await subscribeToPush();
+    setPending(false);
+    if (!result.ok) {
+      reportSubscribeFailure(result.reason);
+      return;
+    }
+    setSubscribedHere(true);
+    setBlocked(false);
+    toast({
+      kind: "success",
+      title: "Reminders on for this device",
+      description: "This device will now get attendance nudges.",
+    });
+  }
+
+  // The account flag is on, the browser can do push, permission isn't blocked,
+  // yet this device has no subscription — so it would silently get nothing.
+  const needsThisDevice =
+    enabled && supported && !blocked && subscribedHere === false;
+
   return (
-    <Card>
+    <Card data-tour="reminders">
       <CardHeader>
         <CardTitle>Attendance reminders</CardTitle>
         <CardDescription>
@@ -267,6 +312,23 @@ function RemindersSection({ profile }: { profile: Profile }) {
             />
           </button>
         </div>
+        {needsThisDevice && (
+          <div className="flex items-center justify-between gap-4 rounded-[8px] border border-primary/30 bg-primary/5 px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              Reminders are on, but this device isn&apos;t set up yet. Allow
+              notifications to start getting them here.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={enableThisDevice}
+              disabled={pending}
+              className="shrink-0"
+            >
+              Turn on here
+            </Button>
+          </div>
+        )}
         {!supported && (
           <p className="text-xs text-warning">
             This browser can&apos;t receive push notifications. On iPhone,

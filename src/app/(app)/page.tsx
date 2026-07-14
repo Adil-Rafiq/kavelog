@@ -11,6 +11,7 @@ import {
 import { formatHours, toDateKey } from "@/lib/utils";
 import { shiftLabel } from "@/lib/policy";
 import { TodayPanel } from "./today-panel";
+import { ReminderPrompt } from "./reminders-prompt";
 import { Card, CardContent } from "@/components/ui/card";
 import { Stat } from "@/components/ui/stat";
 import { DotDivider } from "@/components/ui/divider";
@@ -66,6 +67,8 @@ export default async function TodayPage() {
           </p>
         )}
       </div>
+
+      <ReminderPrompt remindersEnabled={ctx.remindersEnabled} />
 
       {todaysHoliday && (
         <div className="flex items-center gap-3 rounded-[12px] border border-info/40 bg-info/10 px-4 py-3 ring-1 ring-info/20 animate-reveal">

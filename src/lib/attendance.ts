@@ -22,6 +22,7 @@ export interface UserContext {
   id: string;
   shift: Shift;
   departmentName: string | null;
+  remindersEnabled: boolean;
 }
 
 export async function getUserContext(userId: string): Promise<UserContext> {
@@ -31,6 +32,7 @@ export async function getUserContext(userId: string): Promise<UserContext> {
       departmentId: users.departmentId,
       shift: departments.shift,
       departmentName: departments.name,
+      remindersEnabled: users.remindersEnabled,
     })
     .from(users)
     .leftJoin(departments, eq(users.departmentId, departments.id))
@@ -41,6 +43,7 @@ export async function getUserContext(userId: string): Promise<UserContext> {
     id: userId,
     shift: (row?.shift as Shift) ?? "first",
     departmentName: row?.departmentName ?? null,
+    remindersEnabled: row?.remindersEnabled ?? false,
   };
 }
 
